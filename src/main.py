@@ -10,6 +10,7 @@ if sys.stdout is None or sys.stderr is None:
     sys.stderr = NullWriter()
 import api_config
 import ctypes
+from ctypes import wintypes
 import win32gui
 import win32con
 import win32api
@@ -149,6 +150,45 @@ from PyQt6.QtGui import QAction
 
 user32   = ctypes.windll.user32
 kernel32 = ctypes.windll.kernel32
+
+class RECT(ctypes.Structure):
+    _fields_ = [
+        ("left", wintypes.LONG),
+        ("top", wintypes.LONG),
+        ("right", wintypes.LONG),
+        ("bottom", wintypes.LONG)
+    ]
+
+class MONITORINFO(ctypes.Structure):
+    _fields_ = [
+        ("cbSize", wintypes.DWORD),
+        ("rcMonitor", RECT),
+        ("rcWork", RECT),
+        ("dwFlags", wintypes.DWORD)
+    ]
+
+def is_window_maximized(hwnd):
+    return user32.IsZoomed(hwnd) != 0
+
+def is_window_fullscreen(hwnd):
+    win_rect = RECT()
+    if not user32.GetWindowRect(hwnd, ctypes.byref(win_rect)):
+        return False
+    
+    MONITOR_DEFAULTTOPRIMARY = 1
+    h_monitor = user32.MonitorFromWindow(hwnd, MONITOR_DEFAULTTOPRIMARY)
+    
+    monitor_info = MONITORINFO()
+    monitor_info.cbSize = ctypes.sizeof(MONITORINFO)
+    if not user32.GetMonitorInfoW(h_monitor, ctypes.byref(monitor_info)):
+        return False
+
+    monitor_rect = monitor_info.rcMonitor
+    
+    is_width_full = (win_rect.left <= monitor_rect.left) and (win_rect.right >= monitor_rect.right)
+    is_height_full = (win_rect.top <= monitor_rect.top) and (win_rect.bottom >= monitor_rect.bottom)
+
+    return is_width_full and is_height_full
 
 mutex_handle = None  
 
@@ -732,7 +772,7 @@ class WallpaperWindow(QMainWindow):
         QTimer.singleShot(100, self.setup_window_layer)
         self.check_timer = QTimer(self)
         self.check_timer.timeout.connect(self.check_fullscreen)
-        self.check_timer.start(2000)
+        self.check_timer.start(200)
 
     def on_load_finished(self, ok):
 
@@ -770,21 +810,35 @@ class WallpaperWindow(QMainWindow):
 
     def pause_wallpaper(self):
         if not self.is_paused:
-            print("Status: Paused ⏸️")
+            print("Status: Paused ⏸")
             self.is_paused = True
+            
             if self.is_video_mode:
                 self.video_widget.set_paused(True)
             else:
-                self.browser.page().runJavaScript("pauseAnimation();")
+                js_pause = """
+                if (typeof pauseAnimation === 'function') { pauseAnimation(); }
+                var videos = document.getElementsByTagName('video');
+                for(var i=0; i<videos.length; i++) { videos[i].pause(); }
+                """
+                self.browser.page().runJavaScript(js_pause)
+
     def resume_wallpaper(self):
         if self.is_paused:
-            print("Status: Live ▶️")
+            print("Status: Live ▶")
             self.is_paused = False
+            
             if self.is_video_mode:
                 self.video_widget.set_paused(False)
             else:
-                self.browser.page().runJavaScript("resumeAnimation();")
-            self.show(); QTimer.singleShot(50, self.setup_window_layer)
+                js_resume = """
+                if (typeof resumeAnimation === 'function') { resumeAnimation(); }
+                var videos = document.getElementsByTagName('video');
+                for(var i=0; i<videos.length; i++) { videos[i].play(); }
+                """
+                self.browser.page().runJavaScript(js_resume)
+            
+            QTimer.singleShot(50, self.setup_window_layer)
 
     def setup_window_layer(self):
         try:
@@ -811,9 +865,9 @@ class WallpaperWindow(QMainWindow):
 
                 win32gui.SetWindowPos(
                     self.window_handle, 
-                    0, 
+                    1,
                     self.rect.x(), self.rect.y(), self.rect.width(), self.rect.height(), 
-                    win32con.SWP_NOZORDER | win32con.SWP_NOACTIVATE
+                    win32con.SWP_NOACTIVATE
                 )
             else:
                 print("WorkerW not found. Using Fallback.")
@@ -823,7 +877,7 @@ class WallpaperWindow(QMainWindow):
 
                 win32gui.SetWindowPos(
                     self.window_handle, 
-                    win32con.HWND_BOTTOM, 
+                    1,
                     self.rect.x(), self.rect.y(), self.rect.width(), safe_height, 
                     win32con.SWP_NOACTIVATE
                 )
@@ -837,19 +891,20 @@ class WallpaperWindow(QMainWindow):
             class_name = win32gui.GetClassName(fg_window)
             if class_name in ["Progman", "WorkerW", "Shell_TrayWnd"]:
                 if self.is_paused: 
-                    print("Status: Live ▶️ (Back to desktop)"); self.browser.page().runJavaScript("resumeAnimation();"); self.is_paused = False
-                    self.show(); QTimer.singleShot(50, self.setup_window_layer)
+                    self.resume_wallpaper()
                 return
-            placement = win32gui.GetWindowPlacement(fg_window)
-            is_maximized = placement[1] == win32con.SW_SHOWMAXIZED
-            (left, top, right, bottom) = win32gui.GetWindowRect(fg_window)
-            is_fullscreen = (left == 0 and top == 0 and right == self.screen_width and bottom == self.screen_height)
-            should_pause = is_maximized or is_fullscreen
+            
+            is_max = is_window_maximized(fg_window)
+            is_full = is_window_fullscreen(fg_window)
+            
+            should_pause = is_max or is_full
+
             if should_pause and not self.is_paused:
-                print(f"Status: Paused ⏸️ (App maximized/fullscreen)"); self.browser.page().runJavaScript("pauseAnimation();"); self.is_paused = True
+                print(f"Status: Paused ⏸ (App maximized/fullscreen)")
+                self.pause_wallpaper()
             elif not should_pause and self.is_paused:
-                print("Status: Live ▶️ (Resuming from app)"); self.browser.page().runJavaScript("resumeAnimation();"); self.is_paused = False
-                self.show(); QTimer.singleShot(50, self.setup_window_layer)
+                print("Status: Live ▶ (Resuming from app)")
+                self.resume_wallpaper()
         except Exception as e: pass
     def closeEvent(self, event):
         if self.is_video_mode:
