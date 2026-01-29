@@ -292,6 +292,7 @@ const WidgetLoader = {
         this.initEditMenu();
         this.initContextMenu();
         this.initSettingsEditor();
+        this.initTemplateManager();
         this.populateEditMenu();
         this.initWidgetSearch();
         this.setupWidgetClickHandlers();
@@ -1065,6 +1066,232 @@ const WidgetLoader = {
             window.addEventListener('mouseup', () => {
                 isSettingsDragging = false;
             });
+        }
+    },
+
+    async listTemplates() {
+        try {
+            const res = await fetch('/list_templates');
+            const data = await res.json();
+            return data.templates || [];
+        } catch (e) {
+            console.error('Error listing templates:', e);
+            return [];
+        }
+    },
+
+    showNotification(message, type = 'info') {
+        const popup = document.getElementById('notification-popup');
+        const msgEl = document.getElementById('notif-message');
+        const iconEl = document.getElementById('notif-icon');
+        if (!popup || !msgEl) return;
+
+        msgEl.textContent = message;
+        popup.className = `notification-popup show ${type}`;
+
+        if (type === 'success') iconEl.innerHTML = '✅';
+        else if (type === 'error') iconEl.innerHTML = '⚠️';
+        else iconEl.innerHTML = 'ℹ️';
+
+        setTimeout(() => {
+            popup.className = 'notification-popup';
+        }, 3000);
+    },
+
+    confirmAction(message) {
+        return new Promise((resolve) => {
+            const overlay = document.getElementById('custom-confirm-overlay');
+            const msgEl = document.getElementById('confirm-message');
+            const okBtn = document.getElementById('confirm-ok-btn');
+            const cancelBtn = document.getElementById('confirm-cancel-btn');
+
+            if (!overlay) {
+                resolve(confirm(message));
+                return;
+            }
+
+            msgEl.textContent = message;
+            overlay.classList.add('show');
+
+            const cleanup = () => {
+                overlay.classList.remove('show');
+                okBtn.removeEventListener('click', onOk);
+                cancelBtn.removeEventListener('click', onCancel);
+            };
+
+            const onOk = () => { cleanup(); resolve(true); };
+            const onCancel = () => { cleanup(); resolve(false); };
+
+            okBtn.addEventListener('click', onOk);
+            cancelBtn.addEventListener('click', onCancel);
+        });
+    },
+
+    async handleSaveTemplate() {
+        const input = document.getElementById('template-name-input');
+        if (!input || !input.value.trim()) {
+            this.showNotification('Please enter a template name', 'error');
+            return;
+        }
+        const name = input.value.trim();
+
+        try {
+            const res = await fetch('/save_template', {
+                method: 'POST',
+                body: JSON.stringify({ name })
+            });
+            if (res.ok) {
+                input.value = '';
+                this.refreshTemplateList();
+                this.showNotification('Template saved successfully', 'success');
+            } else {
+                this.showNotification('Failed to save template', 'error');
+            }
+        } catch (e) {
+            console.error(e);
+            this.showNotification('Error saving template', 'error');
+        }
+    },
+
+    async handleLoadTemplate(name) {
+        const confirmed = await this.confirmAction(`Overwrite current layout with template "${name}"?`);
+        if (!confirmed) return;
+
+        try {
+            const res = await fetch('/load_template', {
+                method: 'POST',
+                body: JSON.stringify({ name })
+            });
+            if (res.ok) {
+                await this.restorePositions();
+                await this.restoreVisibility();
+                await this.loadWidgetStyles();
+                this.updateCheckboxStates();
+                this.showNotification('Template loaded! Reloading...', 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                this.showNotification('Failed to load template', 'error');
+            }
+        } catch (e) {
+            console.error(e);
+            this.showNotification('Error loading template', 'error');
+        }
+    },
+
+    async handleDeleteTemplate(name) {
+        const confirmed = await this.confirmAction(`Delete template "${name}"?`);
+        if (!confirmed) return;
+
+        try {
+            const res = await fetch('/delete_template', {
+                method: 'POST',
+                body: JSON.stringify({ name })
+            });
+            if (res.ok) {
+                this.refreshTemplateList();
+                this.showNotification('Template deleted', 'success');
+            } else {
+                this.showNotification('Failed to delete template', 'error');
+            }
+        } catch (e) {
+            console.error(e);
+            this.showNotification('Error deleting template', 'error');
+        }
+    },
+
+    async refreshTemplateList() {
+        const list = document.getElementById('template-list');
+        if (!list) return;
+
+        const templates = await this.listTemplates();
+
+        if (templates.length === 0) {
+            list.innerHTML = '<div style="color: #666; font-style: italic; padding: 10px; text-align: center;">No saved templates</div>';
+            return;
+        }
+
+        list.innerHTML = '';
+        templates.forEach(name => {
+            const item = document.createElement('div');
+            item.className = 'tpl-item';
+            item.innerHTML = `
+                <span class="tpl-name">${name}</span>
+                <div class="tpl-actions">
+                    <button class="tpl-btn-icon load" title="Load Template">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 3v12"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <path d="M5 21h14"></path>
+                        </svg>
+                    </button>
+                    <button class="tpl-btn-icon delete" title="Delete Template">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
+                        </svg>
+                    </button>
+                </div>
+            `;
+
+            item.querySelector('.load').addEventListener('click', () => this.handleLoadTemplate(name));
+            item.querySelector('.delete').addEventListener('click', () => this.handleDeleteTemplate(name));
+
+            list.appendChild(item);
+        });
+    },
+
+    openTemplateManager() {
+        const mgr = document.getElementById('template-manager');
+        if (mgr) {
+            mgr.style.display = 'block';
+            this.refreshTemplateList();
+            if (!mgr.style.left || mgr.style.left === 'auto') {
+                mgr.style.left = '50%';
+                mgr.style.top = '50%';
+                mgr.style.transform = 'translate(-50%, -50%)';
+            }
+        }
+    },
+
+    closeTemplateManager() {
+        const mgr = document.getElementById('template-manager');
+        if (mgr) mgr.style.display = 'none';
+    },
+
+    initTemplateManager() {
+        const openBtn = document.getElementById('open-templates-btn');
+        const closeBtn = document.getElementById('close-template-manager');
+        const saveBtn = document.getElementById('save-new-template-btn');
+        const mgr = document.getElementById('template-manager');
+        const dragHandle = document.getElementById('template-manager-drag-handle');
+
+        if (openBtn) openBtn.addEventListener('click', () => this.openTemplateManager());
+        if (closeBtn) closeBtn.addEventListener('click', () => this.closeTemplateManager());
+        if (saveBtn) saveBtn.addEventListener('click', () => this.handleSaveTemplate());
+
+        if (mgr && dragHandle) {
+            let isDragging = false;
+            let offsetX = 0, offsetY = 0;
+
+            dragHandle.addEventListener('mousedown', (e) => {
+                if (e.target.closest('button') || e.target.closest('input')) return;
+                isDragging = true;
+                const rect = mgr.getBoundingClientRect();
+                offsetX = e.clientX - rect.left;
+                offsetY = e.clientY - rect.top;
+                mgr.style.transform = 'none';
+                mgr.style.left = rect.left + 'px';
+                mgr.style.top = rect.top + 'px';
+                e.preventDefault();
+            });
+
+            window.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                mgr.style.left = (e.clientX - offsetX) + 'px';
+                mgr.style.top = (e.clientY - offsetY) + 'px';
+            });
+
+            window.addEventListener('mouseup', () => isDragging = false);
         }
     }
 };

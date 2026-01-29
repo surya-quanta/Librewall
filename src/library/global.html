@@ -13,6 +13,17 @@
         </button>
     </div>
     <div class="edit-menu-content">
+        <div style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+            <button id="open-templates-btn" class="settings-btn settings-btn-secondary"
+                style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                    <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" />
+                    <polyline points="17 21 17 13 7 13 7 21" />
+                    <polyline points="7 3 7 8 15 8" />
+                </svg>
+                Manage Templates
+            </button>
+        </div>
         <div class="widget-search-container">
             <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16"
                 height="16">
@@ -70,5 +81,53 @@
     <div class="settings-editor-footer">
         <button id="settings-apply-btn" class="settings-btn settings-btn-secondary">Apply</button>
         <button id="settings-ok-btn" class="settings-btn settings-btn-primary">OK</button>
+    </div>
+</div>
+
+<div id="template-manager" class="widget-settings-editor">
+    <div class="settings-editor-header" id="template-manager-drag-handle">
+        <h3>Template Manager</h3>
+        <button id="close-template-manager" class="settings-editor-close">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M6 18L18 6M6 6l12 12" />
+            </svg>
+        </button>
+    </div>
+    <div class="settings-editor-content" style="padding: 15px;">
+        <div style="display: flex; gap: 8px; margin-bottom: 15px; align-items: center;">
+            <input type="text" id="template-name-input" class="settings-input" placeholder="New Template Name..."
+                style="flex:1;">
+            <button id="save-new-template-btn" class="settings-btn settings-btn-primary"
+                style="padding: 8px 12px; display: flex; align-items: center; justify-content: center;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                    <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"></path>
+                    <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                    <polyline points="7 3 7 8 15 8"></polyline>
+                </svg>
+            </button>
+        </div>
+        <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">
+            <h4 style="margin: 0 0 10px 0; font-size: 12px; color: #888; text-transform: uppercase;">Saved Templates
+            </h4>
+            <div id="template-list"
+                style="display: flex; flex-direction: column; gap: 8px; max-height: 250px; overflow-y: auto; padding-right: 4px;">
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="notification-popup" class="notification-popup">
+    <span id="notif-icon"></span>
+    <span id="notif-message"></span>
+</div>
+
+<div id="custom-confirm-overlay" class="custom-confirm-overlay">
+    <div class="custom-confirm-box">
+        <h3 class="custom-confirm-title">Confirm Action</h3>
+        <p class="custom-confirm-message" id="confirm-message">Are you sure?</p>
+        <div class="custom-confirm-buttons">
+            <button id="confirm-cancel-btn" class="settings-btn settings-btn-secondary">Cancel</button>
+            <button id="confirm-ok-btn" class="settings-btn settings-btn-primary">Confirm</button>
+        </div>
     </div>
 </div>

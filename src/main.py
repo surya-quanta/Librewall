@@ -415,6 +415,22 @@ def create_handler_class(window_ref, app_ref, port_num, token_from_main):
                 elif self.path == '/': pass
             else:
                 if not self.check_auth(): return
+                
+                if self.path == '/list_templates':
+                    try:
+                        templates_file = os.path.join(SCRIPT_DIR, 'widgets', 'templates.json')
+                        templates = []
+                        if os.path.exists(templates_file):
+                            with open(templates_file, 'r') as f:
+                                data = json.load(f)
+                                templates = list(data.keys())
+                        
+                        self.send_response(200); self.send_header('Content-type', 'application/json'); self.end_headers()
+                        self.wfile.write(json.dumps({'templates': templates}).encode('utf-8'))
+                        return
+                    except Exception as e:
+                        self.send_error(500, f"Error listing templates: {e}")
+                        return
             super().do_GET()
 
         def do_POST(self):
@@ -455,6 +471,102 @@ def create_handler_class(window_ref, app_ref, port_num, token_from_main):
                 except Exception as e:
                     self.send_error(500, f"Error saving widget styles: {e}")
                 return
+            elif self.path == '/save_template':
+                try:
+                    content_length = int(self.headers['Content-Length'])
+                    post_data = self.rfile.read(content_length); 
+                    data = json.loads(post_data)
+                    template_name = data.get('name')
+                    if not template_name: raise ValueError("Template name required")
+
+                    templates_file = os.path.join(SCRIPT_DIR, 'widgets', 'templates.json')
+                    if not os.path.exists(os.path.dirname(templates_file)):
+                        os.makedirs(os.path.dirname(templates_file))
+                    
+                    templates_store = {}
+                    if os.path.exists(templates_file):
+                        try:
+                            with open(templates_file, 'r') as f:
+                                templates_store = json.load(f)
+                        except: pass
+
+                    current_wallpaper_path = self.get_current_wallpaper_path()
+                    template_data = {}
+                    for filename in ['widget.json', 'widget_visibility.json', 'widget_styles.json']:
+                        path = os.path.join(current_wallpaper_path, filename)
+                        if os.path.exists(path):
+                            with open(path, 'r') as f:
+                                template_data[filename] = json.load(f)
+                        else:
+                            template_data[filename] = {}
+                    
+                    templates_store[template_name] = template_data
+
+                    with open(templates_file, 'w') as f:
+                        json.dump(templates_store, f, indent=4)
+
+                    self.send_response(200); self.send_header('Content-type', 'application/json'); self.end_headers()
+                    self.wfile.write(json.dumps({'status': 'success'}).encode('utf-8'))
+                except Exception as e:
+                    self.send_error(500, f"Error saving template: {e}")
+                return
+
+            elif self.path == '/load_template':
+                try:
+                    content_length = int(self.headers['Content-Length'])
+                    post_data = self.rfile.read(content_length)
+                    data = json.loads(post_data)
+                    template_name = data.get('name')
+                    
+                    templates_file = os.path.join(SCRIPT_DIR, 'widgets', 'templates.json')
+                    
+                    if not os.path.exists(templates_file):
+                        self.send_error(404, "No templates found")
+                        return
+
+                    with open(templates_file, 'r') as f:
+                        templates_store = json.load(f)
+                    
+                    if template_name not in templates_store:
+                        self.send_error(404, "Template not found")
+                        return
+
+                    template_data = templates_store[template_name]
+                    current_wallpaper_path = self.get_current_wallpaper_path()
+                    for filename, content in template_data.items():
+                        path = os.path.join(current_wallpaper_path, filename)
+                        with open(path, 'w') as f:
+                            json.dump(content, f, indent=4)
+
+                    self.send_response(200); self.send_header('Content-type', 'application/json'); self.end_headers()
+                    self.wfile.write(json.dumps({'status': 'success'}).encode('utf-8'))
+                except Exception as e:
+                    self.send_error(500, f"Error loading template: {e}")
+                return
+
+            elif self.path == '/delete_template':
+                try:
+                    content_length = int(self.headers['Content-Length'])
+                    post_data = self.rfile.read(content_length)
+                    data = json.loads(post_data)
+                    template_name = data.get('name')
+                    
+                    templates_file = os.path.join(SCRIPT_DIR, 'widgets', 'templates.json')
+                    
+                    if os.path.exists(templates_file):
+                        with open(templates_file, 'r') as f:
+                            templates_store = json.load(f)
+                        
+                        if template_name in templates_store:
+                            del templates_store[template_name]
+                            with open(templates_file, 'w') as f:
+                                json.dump(templates_store, f, indent=4)
+                    
+                    self.send_response(200); self.send_header('Content-type', 'application/json'); self.end_headers()
+                    self.wfile.write(json.dumps({'status': 'success'}).encode('utf-8'))
+                except Exception as e:
+                    self.send_error(500, f"Error deleting template: {e}")
+                return
             self.send_error(404, "Not Found")
     return CustomHandler
 
@@ -476,7 +588,6 @@ class CustomWebEngineView(QWebEngineView):
         self.resume_action = self.context_menu.addAction("Resume Wallpaper")
         self.context_menu.addSeparator()
         
-        # Only show Edit Widgets if Global Widgets are enabled and not in Video Mode (implied by this class usage)
         if self.window.enable_global_widget:
             edit_widgets_action = self.context_menu.addAction("Edit Widgets")
             edit_widgets_action.triggered.connect(self.toggle_edit_mode)
