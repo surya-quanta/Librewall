@@ -1,6 +1,6 @@
 # Widget Development Guide
 
-This guide explains how to create custom widgets for Librewall.
+This guide explains how to create custom widgets for Cyberwall.
 
 ## Widget Structure
 
@@ -28,26 +28,24 @@ widgets/my-widget/
 
 ```javascript
 (function () {
-    const WIDGET_ID = 'my-widget';
+    const script = document.currentScript;
+    const WIDGET_ID = script.dataset.widgetId;
 
-    window.getWidgetContent_myWidget = function () {
+    window['getWidgetContent_' + WIDGET_ID] = function () {
         return {
             id: WIDGET_ID,
             html: `
                 <h2>My Widget</h2>
-                <div id="my-content">Hello World</div>
+                <div id="${WIDGET_ID}-content">Hello World</div>
             `,
             settings: {
                 minWidth: '200px',
                 minHeight: '150px'
             },
             init: function () {
-                // Called when widget loads
-                console.log('Widget initialized');
+                console.log('Widget initialized:', WIDGET_ID);
             },
             destroy: function () {
-                // Called when widget is removed
-                // Clean up intervals, listeners, etc.
             }
         };
     };

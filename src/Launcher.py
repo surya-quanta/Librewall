@@ -851,6 +851,102 @@ class EditorHTTPHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_json_response(500, {'error': str(e)})
             return
 
+        elif self.path == '/install_widget':
+            try:
+                content_len = int(self.headers.get('Content-Length'))
+                post_body = self.rfile.read(content_len)
+                data = json.loads(post_body)
+
+                widget_id = str(data.get('widgetId'))
+                if not widget_id:
+                    self.send_json_response(400, {'error': "Missing 'widgetId'"})
+                    return
+
+                api_url = f"{API_BASE_URL}?action=get_widgets&query={widget_id}"
+                print(f"Fetching widget info from: {api_url}")
+                
+                widget_data = None
+                with urllib.request.urlopen(api_url, timeout=10) as response:
+                    api_resp = json.load(response)
+                    if api_resp.get('data'):
+                        for w in api_resp['data']:
+                            if str(w.get('id')) == widget_id:
+                                widget_data = w
+                                break
+                
+                if not widget_data:
+                     self.send_json_response(404, {'error': 'Widget not found or ID mismatch in marketplace.'})
+                     return
+
+                zip_url = widget_data.get('zipUrl')
+                if not zip_url:
+                     self.send_json_response(400, {'error': 'Widget has no download URL.'})
+                     return
+
+                print(f"Downloading widget from: {zip_url}")
+                with urllib.request.urlopen(zip_url, timeout=30) as response:
+                    zip_data = response.read()
+
+                target_folder_name = str(widget_id)
+                widgets_dir = os.path.join(SERVER_ROOT, 'widgets', target_folder_name)
+                os.makedirs(widgets_dir, exist_ok=True)
+
+                with zipfile.ZipFile(io.BytesIO(zip_data)) as zf:
+                     root_folder = ""
+                     if len(zf.namelist()) > 0:
+                         root_folder_parts = zf.namelist()[0].split('/')
+                         if len(root_folder_parts) > 1 and zf.namelist()[0].endswith('/'):
+                               root_folder = zf.namelist()[0]
+                     
+                     for file_info in zf.infolist():
+                        if file_info.is_dir(): continue
+                        
+                        relative_path = file_info.filename
+                        if root_folder and relative_path.startswith(root_folder):
+                             relative_path = relative_path[len(root_folder):]
+                        
+                        if not relative_path: continue
+                        
+                        target_path = os.path.join(widgets_dir, relative_path)
+                        os.makedirs(os.path.dirname(target_path), exist_ok=True)
+                        with zf.open(file_info) as source, open(target_path, 'wb') as target:
+                            target.write(source.read())
+
+                index_path = os.path.join(SERVER_ROOT, 'widgets', 'index.json')
+                
+                registry_data = {"widgets": []}
+                if os.path.isfile(index_path):
+                    try:
+                        with open(index_path, 'r', encoding='utf-8') as f:
+                            registry_data = json.load(f)
+                    except: pass
+                
+                existing_entry = next((w for w in registry_data.get('widgets', []) if str(w.get('id')) == str(widget_id)), None)
+                
+                new_entry = {
+                    "id": str(widget_id),
+                    "name": widget_data.get('widgetName', f"Widget {widget_id}"),
+                    "author": widget_data.get('author', 'Unknown'),
+                    "version": widget_data.get('version', 1),
+                }
+                
+                if existing_entry:
+                    existing_entry.update(new_entry)
+                else:
+                    if 'widgets' not in registry_data: registry_data['widgets'] = []
+                    registry_data['widgets'].append(new_entry)
+
+                with open(index_path, 'w', encoding='utf-8') as f:
+                    json.dump(registry_data, f, indent=4)
+                
+                print(f"Successfully installed widget: {widget_id}")
+                self.send_json_response(200, {'status': 'success', 'installed': widget_id})
+
+            except Exception as e:
+                print(f"Error installing widget: {e}")
+                self.send_json_response(500, {'error': str(e)})
+            return
+
         elif self.path == '/start_engine':
             try:
                 app_config = read_app_config()
@@ -872,6 +968,54 @@ class EditorHTTPHandler(http.server.SimpleHTTPRequestHandler):
             except Exception as e:
                 print(f"Error starting engine: {e}")
                 self.send_json_response(500, {'error': f"Error starting engine: {e}"})
+            return
+
+        elif self.path == '/delete_widget':
+            try:
+                content_len = int(self.headers.get('Content-Length'))
+                post_body = self.rfile.read(content_len)
+                data = json.loads(post_body)
+
+                widget_id = str(data.get('widgetId'))
+                if not widget_id:
+                    self.send_json_response(400, {'error': "Missing 'widgetId'"})
+                    return
+
+                if '..' in widget_id or '/' in widget_id or '\\' in widget_id:
+                     self.send_json_response(400, {'error': "Invalid widget ID"})
+                     return
+
+                widget_path = os.path.join(SERVER_ROOT, 'widgets', widget_id)
+                
+                index_path = os.path.join(SERVER_ROOT, 'widgets', 'index.json')
+                registry_data = {"widgets": []}
+                if os.path.isfile(index_path):
+                    try:
+                        with open(index_path, 'r', encoding='utf-8') as f:
+                            registry_data = json.load(f)
+                    except: pass
+                
+                original_count = len(registry_data.get('widgets', []))
+                registry_data['widgets'] = [w for w in registry_data.get('widgets', []) if str(w.get('id')) != widget_id]
+                new_count = len(registry_data['widgets'])
+
+                if original_count == new_count and not os.path.isdir(widget_path):
+                     self.send_json_response(404, {'error': 'Widget not found.'})
+                     return
+
+                with open(index_path, 'w', encoding='utf-8') as f:
+                    json.dump(registry_data, f, indent=4)
+
+                if os.path.isdir(widget_path):
+                    import shutil
+                    shutil.rmtree(widget_path)
+                
+                print(f"Successfully deleted widget: {widget_id}")
+                self.send_json_response(200, {'status': 'success', 'deleted': widget_id})
+
+            except Exception as e:
+                print(f"Error deleting widget: {e}")
+                self.send_json_response(500, {'error': str(e)})
             return
 
         elif self.path == '/delete_theme':

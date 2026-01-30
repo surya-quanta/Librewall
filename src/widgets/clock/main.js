@@ -1,5 +1,6 @@
 (function () {
-    const WIDGET_ID = 'clock';
+    const script = document.currentScript;
+    const WIDGET_ID = script.dataset.widgetId;
 
     const CONFIG = {
         align: 'right',
@@ -39,7 +40,7 @@
                 dayEl.style.color = CONFIG.dayColor;
             }
 
-            const wrapper = document.getElementById('live-clock');
+            const wrapper = document.getElementById(WIDGET_ID);
             if (wrapper) {
                 wrapper.style.textAlign = CONFIG.align;
             }
@@ -48,7 +49,7 @@
 
     let clockInterval = null;
 
-    window.getWidgetContent_clock = function () {
+    window['getWidgetContent_' + WIDGET_ID] = function () {
 
         const savedStyles = typeof WidgetLoader !== 'undefined' ? WidgetLoader.getStyles(WIDGET_ID) : {};
         if (savedStyles.align) CONFIG.align = savedStyles.align;

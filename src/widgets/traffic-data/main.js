@@ -1,8 +1,9 @@
 
 (function () {
-    const WIDGET_ID = 'traffic-data';
+    const script = document.currentScript;
+    const WIDGET_ID = script.dataset.widgetId;
 
-    window.getWidgetContent_trafficData = function () {
+    window['getWidgetContent_' + WIDGET_ID] = function () {
         return {
             id: WIDGET_ID,
             html: `

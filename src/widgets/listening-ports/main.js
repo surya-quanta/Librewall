@@ -1,8 +1,9 @@
 
 (function () {
-    const WIDGET_ID = 'listening-ports';
+    const script = document.currentScript;
+    const WIDGET_ID = script.dataset.widgetId;
 
-    window.getWidgetContent_listeningPorts = function () {
+    window['getWidgetContent_' + WIDGET_ID] = function () {
         return {
             id: WIDGET_ID,
             html: `

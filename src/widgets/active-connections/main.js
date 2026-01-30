@@ -1,8 +1,9 @@
 
 (function () {
-    const WIDGET_ID = 'active-connections';
+    const script = document.currentScript;
+    const WIDGET_ID = script.dataset.widgetId;
 
-    window.getWidgetContent_activeConnections = function () {
+    window['getWidgetContent_' + WIDGET_ID] = function () {
         return {
             id: WIDGET_ID,
             html: `

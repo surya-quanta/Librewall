@@ -690,6 +690,251 @@
             scrollbar-width: thin;
             scrollbar-color: var(--primary-color) var(--bg-color);
         }
+
+        .widget-modal-box {
+            background: rgba(30, 30, 30, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            width: 90%;
+            max-width: 900px;
+            height: 80vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+            animation: modalPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        @keyframes modalPop {
+            from {
+                transform: scale(0.95);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .widget-modal-header {
+            padding: 20px 30px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .widget-modal-header h2 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .widget-modal-close {
+            background: transparent;
+            border: none;
+            color: #888;
+            cursor: pointer;
+            transition: color 0.2s;
+            padding: 5px;
+        }
+
+        .widget-modal-close:hover {
+            color: var(--text-color);
+        }
+
+        .widget-modal-close svg {
+            width: 24px;
+            height: 24px;
+            fill: currentColor;
+        }
+
+        .widget-modal-content {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            align-content: start;
+        }
+
+        .widget-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 20px;
+            position: relative;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .widget-card:hover {
+            transform: translateY(-4px);
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .widget-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+        }
+
+        .widget-icon-placeholder {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.2rem;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .widget-card-info h3 {
+            margin: 0 0 5px 0;
+            font-size: 1.1rem;
+            color: var(--text-color);
+        }
+
+        .widget-card-info p {
+            margin: 0;
+            font-size: 0.85rem;
+            color: #888;
+        }
+
+        .widget-card-meta {
+            display: flex;
+            gap: 10px;
+            font-size: 0.75rem;
+            color: #666;
+            margin-top: auto;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            padding-top: 12px;
+        }
+
+        .widget-status {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .widget-status.active {
+            background: rgba(46, 204, 113, 0.2);
+            color: #2ecc71;
+        }
+
+        .widget-status.corrupted {
+            background: rgba(231, 76, 60, 0.2);
+            color: #e74c3c;
+        }
+
+        .widget-delete-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(231, 76, 60, 0.1);
+            color: #e74c3c;
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 1;
+            transform: none;
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .widget-delete-btn:hover {
+            background: #e74c3c;
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .widget-delete-btn svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+        }
+
+        .confirm-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            z-index: 20000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .confirm-modal {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 30px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+            animation: modalPop 0.2s ease-out;
+        }
+
+        .confirm-modal h3 {
+            margin-top: 0;
+            color: var(--text-color);
+        }
+
+        .confirm-modal p {
+            color: #888;
+            margin-bottom: 25px;
+            line-height: 1.5;
+        }
+
+        .confirm-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .btn-cancel {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+        }
+
+        .btn-confirm-delete {
+            background: var(--danger-color);
+            color: white;
+            border: none;
+        }
+
+        .btn-confirm-delete:hover {
+            background: #c9303d;
+        }
     </style>
     <script src="/library/lenis.min.js"></script>
 </head>
@@ -702,6 +947,7 @@
     <header class="header">
         <button class="header-btn" id="refresh-btn">Refresh</button>
         <a href="discover.html" class="header-btn" id="discover-btn">Discover</a>
+        <button class="header-btn" id="manage-widgets-btn">Manage Widgets</button>
         <button class="header-btn" id="import-btn" style="background-color: var(--primary-color);">Import</button>
         <a href="settings.html" class="header-btn" id="settings-btn">Settings</a>
         <button class="header-btn btn-engine-toggle" id="engine-toggle-btn" disabled>Checking...</button>
@@ -739,6 +985,51 @@
         <h2 id="invalid-header" style="display:none; margin-top: 3rem;">Invalid Wallpapers</h2>
         <div id="wallpaper-grid-invalid" class="wallpaper-grid"></div>
     </main>
+
+    <div id="notification-toast" class="notification-toast">
+        <span id="notification-msg"></span>
+    </div>
+
+    <div id="manage-widgets-modal" class="lightbox-overlay"
+        style="display: none; align-items: center; justify-content: center;">
+        <div class="widget-modal-box">
+            <div class="widget-modal-header">
+                <h2>
+                    <svg viewBox="0 0 24 24" style="width:28px; height:28px; fill:var(--primary-color)">
+                        <path
+                            d="M13 13v8h8v-8h-8zM3 21h8v-8H3v8zM3 3v8h8V3H3zm13.66-1.31L11 7.34 16.66 13l5.66-5.66-5.66-5.65z" />
+                    </svg>
+                    Manage Widgets
+                </h2>
+                <button id="close-manage-widgets" class="widget-modal-close">
+                    <svg viewBox="0 0 24 24">
+                        <path
+                            d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                    </svg>
+                </button>
+            </div>
+            <div id="installed-widgets-list" class="widget-modal-content" data-lenis-prevent>
+            </div>
+        </div>
+    </div>
+
+    <div id="delete-confirm-modal" class="confirm-modal-overlay">
+        <div class="confirm-modal">
+            <div
+                style="margin-bottom:15px; background:rgba(231,76,60,0.1); width:60px; height:60px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin-left:auto; margin-right:auto;">
+                <svg viewBox="0 0 24 24" style="width:30px; height:30px; fill:var(--danger-color);">
+                    <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
+                </svg>
+            </div>
+            <h3>Delete Widget?</h3>
+            <p>Are you sure you want to delete <strong id="delete-widget-name" style="color:var(--text-color)">this
+                    widget</strong>?<br>This action cannot be undone.</p>
+            <div class="confirm-actions">
+                <button class="btn btn-cancel" onclick="closeDeleteConfirm()">Cancel</button>
+                <button class="btn btn-confirm-delete" id="confirm-delete-btn">Delete</button>
+            </div>
+        </div>
+    </div>
 
     <div id="lightbox-overlay" class="lightbox-overlay">
         <div id="lightbox-box" class="lightbox-box">
@@ -1361,6 +1652,11 @@
                     setTimeout(checkEngineStatus, 2000);
                 }
                 showAlert("Success", "Settings Saved"); loadWallpapers();
+
+                if (manageWidgetsModal && manageWidgetsModal.style.display === 'flex') {
+                    openManageWidgets();
+                }
+
             } catch (e) { showAlert("Error", e.message); }
             finally { updateSaveButtonState(); }
         };
@@ -1531,6 +1827,128 @@
                 }
             }
         }, true);
+
+        const manageWidgetsBtn = document.getElementById('manage-widgets-btn');
+        const manageWidgetsModal = document.getElementById('manage-widgets-modal');
+        const closeManageWidgets = document.getElementById('close-manage-widgets');
+        const installedWidgetsList = document.getElementById('installed-widgets-list');
+        const deleteConfirmModal = document.getElementById('delete-confirm-modal');
+        let widgetToDeleteId = null;
+
+        if (manageWidgetsBtn) manageWidgetsBtn.onclick = openManageWidgets;
+        if (closeManageWidgets) closeManageWidgets.onclick = () => manageWidgetsModal.style.display = 'none';
+        if (manageWidgetsModal) {
+            manageWidgetsModal.onclick = (e) => {
+                if (e.target === manageWidgetsModal) manageWidgetsModal.style.display = 'none';
+            };
+        }
+
+        function showNotification(msg, type = 'success') {
+            const toast = document.getElementById('notification-toast');
+            const msgEl = document.getElementById('notification-msg');
+            msgEl.textContent = msg;
+            toast.className = `notification-toast show ${type}`;
+            setTimeout(() => toast.className = 'notification-toast', 3000);
+        }
+
+        function closeDeleteConfirm() {
+            deleteConfirmModal.style.display = 'none';
+            widgetToDeleteId = null;
+        }
+
+        async function openManageWidgets() {
+            manageWidgetsModal.style.display = 'flex';
+            installedWidgetsList.innerHTML = '<div class="spinner" style="width:40px; height:40px; margin: 50px auto;"></div>';
+
+            try {
+                const response = await fetch(`/widgets/index.json?t=${Date.now()}`);
+                if (!response.ok) throw new Error("Failed to load registry");
+                const data = await response.json();
+                const widgets = data.widgets || [];
+
+                installedWidgetsList.innerHTML = '';
+
+                if (widgets.length === 0) {
+                    installedWidgetsList.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:50px; color:#666;">No widgets installed</div>';
+                    return;
+                }
+
+                for (const widget of widgets) {
+                    let isCorrupted = false;
+                    try {
+                        const check = await fetch(`/widgets/${widget.id}/main.js?t=${Date.now()}`, { method: 'HEAD' });
+                        if (!check.ok) isCorrupted = true;
+                    } catch (e) { isCorrupted = true; }
+
+                    const protectedWidgets = ['clock', 'traffic-data', 'listening-ports', 'live-traffic-log', 'active-connections'];
+                    const isProtected = protectedWidgets.includes(widget.id);
+
+                    const card = document.createElement('div');
+                    card.className = 'widget-card';
+                    card.innerHTML = `
+                        <div class="widget-card-header">
+                            <div class="widget-icon-placeholder">${widget.name.charAt(0).toUpperCase()}</div>
+                            ${isProtected ?
+                            `<div title="System Widget" style="opacity:0.5; padding:8px;"><svg viewBox="0 0 24 24" style="width:20px; height:20px; fill:#888;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg></div>` :
+                            `<button class="widget-delete-btn" title="Delete Widget" onclick="promptDeleteWidget('${widget.id}', '${widget.name.replace(/'/g, "\\'")}')">
+                                    <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                                </button>`
+                        }
+                        </div>
+                        <div class="widget-card-info">
+                            <h3>${widget.name}</h3>
+                            <p>by ${widget.author}</p>
+                        </div>
+                        <div class="widget-card-meta">
+                            <span>v${widget.version}</span>
+                            <span class="widget-status ${isCorrupted ? 'corrupted' : 'active'}">${isCorrupted ? 'Corrupted' : 'Active'}</span>
+                        </div>
+                    `;
+                    installedWidgetsList.appendChild(card);
+                }
+
+            } catch (e) {
+                installedWidgetsList.innerHTML = `<div style="text-align:center; color:var(--danger-color);">Error loading widgets: ${e.message}</div>`;
+            }
+        }
+
+        window.promptDeleteWidget = function (id, name) {
+            widgetToDeleteId = id;
+            document.getElementById('delete-widget-name').textContent = name;
+            deleteConfirmModal.style.display = 'flex';
+        };
+
+        document.getElementById('confirm-delete-btn').onclick = async function () {
+            if (!widgetToDeleteId) return;
+
+            const btn = document.getElementById('confirm-delete-btn');
+            const originalText = btn.textContent;
+            btn.textContent = 'Deleting...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/delete_widget', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ widgetId: widgetToDeleteId })
+                });
+
+                if (!response.ok) throw new Error("Delete failed");
+
+
+                showNotification('Widget deleted successfully', 'success');
+                closeDeleteConfirm();
+
+                // Refresh list
+                setTimeout(openManageWidgets, 300);
+
+            } catch (e) {
+                showNotification(e.message, 'error');
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        };
     </script>
     <script>
         const lenis = new Lenis({

@@ -5,7 +5,6 @@
             "name": "Live Clock",
             "author": "Librewall",
             "authorUrl": "https://librewall.app",
-            "folder": "clock",
             "version": "1.0.0"
         },
         {
@@ -13,7 +12,6 @@
             "name": "Traffic Data",
             "author": "Librewall",
             "authorUrl": "https://librewall.app",
-            "folder": "traffic-data",
             "version": "1.0.0"
         },
         {
@@ -21,7 +19,6 @@
             "name": "Listening Ports",
             "author": "Librewall",
             "authorUrl": "https://librewall.app",
-            "folder": "listening-ports",
             "version": "1.0.0"
         },
         {
@@ -29,7 +26,6 @@
             "name": "Live Traffic Log",
             "author": "Librewall",
             "authorUrl": "https://librewall.app",
-            "folder": "live-traffic-log",
             "version": "1.0.0"
         },
         {
@@ -37,15 +33,6 @@
             "name": "Active Connections",
             "author": "Librewall",
             "authorUrl": "https://librewall.app",
-            "folder": "active-connections",
-            "version": "1.0.0"
-        },
-        {
-            "id": "weather",
-            "name": "Weather",
-            "author": "Librewall",
-            "authorUrl": "https://librewall.app",
-            "folder": "weather",
             "version": "1.0.0"
         }
     ]

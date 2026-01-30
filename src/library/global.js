@@ -20,8 +20,11 @@ const WidgetLoader = {
     },
 
     async loadWidget(widgetInfo) {
-        const { id, folder } = widgetInfo;
+        const { id } = widgetInfo;
         if (this.loadedWidgets[id]) return this.loadedWidgets[id];
+
+        const safeId = String(id);
+        const folder = safeId;
 
         try {
 
@@ -30,7 +33,7 @@ const WidgetLoader = {
                 const link = document.createElement('link');
                 link.rel = 'stylesheet';
                 link.href = cssPath;
-                link.id = `widget-css-${id}`;
+                link.id = `widget-css-${safeId}`;
                 document.head.appendChild(link);
             }
 
@@ -42,17 +45,18 @@ const WidgetLoader = {
                 }
                 const script = document.createElement('script');
                 script.src = jsPath;
-                script.id = `widget-js-${id}`;
+                script.id = `widget-js-${safeId}`;
+                script.dataset.widgetId = safeId;
                 script.onload = resolve;
                 script.onerror = reject;
                 document.head.appendChild(script);
             });
 
-            const camelId = this.camelCase(id);
+            const camelId = this.camelCase(safeId);
             const funcNames = [
                 `getWidgetContent_${camelId}`,
-                `getWidgetContent_${id}`,
-                `getWidgetContent_${id.replace(/-/g, '')}`
+                `getWidgetContent_${safeId}`,
+                `getWidgetContent_${safeId.replace(/-/g, '')}`
             ];
 
             let getContent = null;
@@ -61,6 +65,10 @@ const WidgetLoader = {
                     getContent = window[funcName];
                     break;
                 }
+            }
+
+            if (!getContent && typeof window[`getWidgetContent_${safeId}`] === 'function') {
+                getContent = window[`getWidgetContent_${safeId}`];
             }
 
             if (getContent) {

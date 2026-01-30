@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Widgets Marketplace</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --card-bg: #2b2b2b;
+            --text-color: #eaeaea;
+            --author-color: #ccc;
+            --border-color: #444;
+            --hover-border: #777;
+            --overlay-bg: rgba(0, 0, 0, 0.8);
+            --modal-bg: #333;
+            --danger-color: #e63946;
+            --success-color: #2a9d8f;
+            --success-hover: #268a7f;
+            --primary-color: #0d6efd;
+            --primary-hover: #0b5ed7;
+            --secondary-color: #6c757d;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            -webkit-user-select: none;
+            user-select: none;
+            cursor: default;
+        }
+
+        .header {
+            background-color: var(--card-bg);
+            padding: 0.75rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 999;
+            display: flex;
+            align-items: center;
+        }
+
+        .header-btn {
+            background: #444;
+            color: var(--text-color);
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin-right: 1.5rem;
+            transition: background-color 0.2s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .header-btn:hover {
+            background-color: #555;
+        }
+
+        .header-title {
+            font-size: 1.2rem;
+            font-weight: 500;
+            color: var(--text-color);
+            margin: 0;
+            margin-right: auto;
+        }
+
+        .search-form {
+            display: flex;
+            align-items: center;
+        }
+
+        .search-container {
+            display: flex;
+            align-items: center;
+            background: #1a1a1a;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 4px 12px;
+            transition: border-color 0.2s;
+        }
+
+        .search-container:focus-within {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.2);
+        }
+
+        .search-container input {
+            background: transparent;
+            border: none;
+            color: var(--text-color);
+            padding: 0.5rem;
+            font-size: 0.9rem;
+            outline: none;
+            width: 200px;
+        }
+
+        .search-container button {
+            background: transparent;
+            border: none;
+            color: var(--secondary-color);
+            padding: 0.4rem;
+            cursor: pointer;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.2s;
+        }
+
+        .search-container button:hover {
+            color: var(--text-color);
+        }
+
+        .search-container button svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+        }
+
+        .content-wrapper {
+            padding: 2rem;
+        }
+
+        .wallpaper-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .wallpaper-card {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            transition: all 0.2s ease-in-out;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .wallpaper-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--hover-border);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .card-label {
+            position: absolute;
+            top: 0.75rem;
+            color: white;
+            padding: 0.25rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            z-index: 5;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .installed-label {
+            right: 0.75rem;
+            background-color: var(--success-color);
+        }
+
+        .type-label {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: rgba(0, 0, 0, 0.75);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            z-index: 10;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .type-label.widget {
+            background-color: #ff9800;
+        }
+
+        .wallpaper-card img {
+            width: 100%;
+            height: auto;
+            aspect-ratio: 16 / 9;
+            object-fit: cover;
+            display: block;
+        }
+
+        .wallpaper-info {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            padding: 0.75rem 1rem;
+        }
+
+        .wallpaper-info h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin: 0 0 0.25rem 0;
+            color: var(--text-color);
+            white-space: normal;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .wallpaper-info p {
+            font-size: 0.85rem;
+            color: var(--author-color);
+            margin: 0;
+        }
+
+        .wallpaper-card.is-disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .pagination-controls .btn {
+            padding: 0.75rem 1.25rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            background-color: #444;
+            color: var(--text-color);
+        }
+
+        .pagination-controls .btn:hover {
+            background-color: #555;
+        }
+
+        /* Lightbox Styles */
+        .lightbox-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--overlay-bg);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 2rem;
+            box-sizing: border-box;
+        }
+
+        .lightbox-box {
+            display: flex;
+            background: var(--modal-bg);
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            width: 100%;
+            max-width: 900px;
+            max-height: 90vh;
+            position: relative;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .lightbox-box .close-icon {
+            position: absolute;
+            top: 1rem;
+            right: 1.25rem;
+            font-size: 2rem;
+            font-weight: 300;
+            color: var(--author-color);
+            cursor: pointer;
+            transition: color 0.2s;
+            z-index: 10;
+        }
+
+        .lightbox-box .close-icon:hover {
+            color: var(--text-color);
+        }
+
+        .lightbox-image {
+            flex-basis: 55%;
+            flex-shrink: 0;
+        }
+
+        .lightbox-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 8px 0 0 8px;
+            display: block;
+        }
+
+        .lightbox-content {
+            flex-basis: 45%;
+            padding: 2rem;
+            overflow-y: auto;
+            box-sizing: border-box;
+        }
+
+        .lightbox-content h2 {
+            font-size: 1.8rem;
+            margin-top: 0;
+            margin-bottom: 0.5rem;
+        }
+
+        .lightbox-content .author {
+            font-size: 1rem;
+            color: var(--author-color);
+            margin-bottom: 1.5rem;
+        }
+
+        .lightbox-content .description {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin-bottom: 2rem;
+        }
+
+        .lightbox-actions {
+            display: flex;
+            gap: 1rem;
+            border-top: 1px solid var(--border-color);
+            padding-top: 1.5rem;
+        }
+
+        .btn-success {
+            background-color: var(--success-color);
+            color: white;
+            padding: 0.75rem 1.25rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-success:hover {
+            background-color: var(--success-hover);
+        }
+
+        .btn-success:disabled {
+            background-color: #555;
+            cursor: not-allowed;
+        }
+
+        /* Error & Loader */
+        .error-container {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 4rem 2rem;
+            text-align: center;
+            color: var(--secondary-color);
+        }
+
+        .error-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.7;
+        }
+
+        .error-title {
+            font-size: 1.5rem;
+            color: var(--text-color);
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        #loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg-color);
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.5s ease;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid var(--card-bg);
+            border-top: 5px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .infinite-loader {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: center;
+            padding: 2rem;
+            display: none;
+        }
+
+        .no-more-text {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 2rem;
+            color: var(--secondary-color);
+            font-size: 0.9rem;
+            display: none;
+        }
+
+        .notification-toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-left: 4px solid var(--primary-color);
+            padding: 15px 20px;
+            border-radius: 4px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 10000;
+        }
+
+        .notification-toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .notification-toast.error {
+            border-left-color: var(--danger-color);
+        }
+
+        .notification-toast.success {
+            border-left-color: var(--success-color);
+        }
+    </style>
+    <script src="/library/lenis.min.js"></script>
+</head>
+
+<body>
+    <div id="loader">
+        <div class="spinner"></div>
+    </div>
+    <div id="notification-toast" class="notification-toast">
+        <span id="notification-msg"></span>
+    </div>
+
+    <header class="header">
+        <a href="/discover.html" class="header-btn">&larr; Back</a>
+        <h1 class="header-title">Widgets</h1>
+        <form class="search-form" id="search-form">
+            <div class="search-container">
+                <input type="search" id="search-input" placeholder="Search widgets...">
+                <button type="submit">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <path
+                            d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
+                    </svg>
+                </button>
+            </div>
+        </form>
+    </header>
+
+    <div id="external-link-modal"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:20001; align-items:center; justify-content:center;">
+        <div
+            style="background:var(--card-bg); padding:20px; border-radius:8px; max-width:400px; text-align:center; border:1px solid var(--border-color); box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+            <h3 style="margin-top:0; color:var(--text-color);">Open External Link?</h3>
+            <p style="color:var(--secondary-color); word-break:break-all; margin: 15px 0;" id="external-link-url"></p>
+            <div style="margin-top:20px; display:flex; gap:10px; justify-content:center;">
+                <button onclick="closeExternalLinkModal()" class="btn-success"
+                    style="background:#555; color:white;">Cancel</button>
+                <button onclick="confirmExternalLink()" class="btn-success"
+                    style="background:#0d6efd;">Continue</button>
+            </div>
+        </div>
+    </div>
+
+    <main class="content-wrapper">
+        <div id="widget-grid" class="wallpaper-grid"></div>
+
+        <div id="connection-error" class="error-container">
+            <div class="error-icon">📡</div>
+            <div class="error-title">Connection Failed</div>
+            <div class="error-desc">We couldn't reach the server.</div>
+            <button id="retry-btn" class="pagination-controls btn">Try Again</button>
+        </div>
+
+        <div id="infinite-scroll-sentinel" class="infinite-loader">
+            <div class="spinner" style="width: 30px; height: 30px; border-width: 3px;"></div>
+        </div>
+        <div id="no-more-msg" class="no-more-text">🎉 You've reached the end!</div>
+    </main>
+
+    <div id="lightbox-overlay" class="lightbox-overlay">
+        <div id="lightbox-box" class="lightbox-box">
+            <span class="close-icon" id="lightbox-close">&times;</span>
+            <div class="lightbox-image">
+                <img id="lightbox-img" src="" alt="Thumbnail">
+            </div>
+            <div class="lightbox-content">
+                <h2 id="lightbox-title"></h2>
+                <p class="author" id="lightbox-author"></p>
+                <p class="description" id="lightbox-description"></p>
+                <div class="lightbox-actions">
+                    <button class="btn btn-success" id="lightbox-install">Install</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let API_BASE_URL = '#';
+        let CURRENT_APP_VERSION = 1;
+        let currentPage = 1;
+        let currentSearchQuery = '';
+        let installedWidgetIds = [];
+        let isLoading = false;
+        let hasMore = true;
+        let currentTheme = null; // reused name, actually currentWidget
+
+        const grid = document.getElementById('widget-grid');
+        const sentinel = document.getElementById('infinite-scroll-sentinel');
+        const noMoreMsg = document.getElementById('no-more-msg');
+        const errorView = document.getElementById('connection-error');
+        const retryBtn = document.getElementById('retry-btn');
+        const searchForm = document.getElementById('search-form');
+        const searchInput = document.getElementById('search-input');
+
+        // Lightbox
+        const lightboxOverlay = document.getElementById('lightbox-overlay');
+        const lightboxClose = document.getElementById('lightbox-close');
+
+        async function initializeSettings() {
+            try {
+                const response = await fetch('/get_app_settings');
+                const settings = await response.json();
+                if (settings.apiBaseUrl) API_BASE_URL = settings.apiBaseUrl;
+                if (settings.appVersion) CURRENT_APP_VERSION = settings.appVersion;
+            } catch (err) { console.error(err); }
+        }
+
+        async function fetchInstalledWidgets() {
+            try {
+                const response = await fetch('/widgets/index.json');
+                if (!response.ok) return;
+                const data = await response.json();
+                if (data.widgets) {
+                    installedWidgetIds = data.widgets.map(w => w.id.toString());
+                }
+            } catch (err) { }
+        }
+
+        async function fetchWidgets(append = false) {
+            if (API_BASE_URL === '#') return;
+            if (isLoading) return;
+            if (append && !hasMore) return;
+
+            isLoading = true;
+            if (!append) {
+                grid.innerHTML = '';
+                grid.style.display = 'grid';
+                sentinel.style.display = 'none';
+                noMoreMsg.style.display = 'none';
+                errorView.style.display = 'none';
+            } else {
+                sentinel.style.display = 'flex';
+            }
+
+            let url = '';
+            if (currentSearchQuery) {
+                url = `${API_BASE_URL}?action=get_widgets&query=${currentSearchQuery}&page=${currentPage}`;
+            } else {
+                url = `${API_BASE_URL}?action=get_widgets&page=${currentPage}`;
+            }
+
+            try {
+                if (!append) await fetchInstalledWidgets();
+
+                const response = await fetch(url);
+                if (!response.ok) throw new Error("API Error");
+                const data = await response.json();
+
+                if (data.data && data.data.length > 0) {
+                    data.data.forEach(widget => {
+                        const cardData = {
+                            id: widget.id,
+                            themeName: widget.widgetName || widget.name,
+                            author: widget.author,
+                            thumbnailUrl: widget.thumbnailUrl,
+                            description: widget.description,
+                            min_version: widget.min_version,
+                            zipUrl: widget.zipUrl,
+                            type: 'widget',
+                            isWidget: true
+                        };
+                        grid.appendChild(createWidgetCard(cardData));
+                    });
+
+                    if (data.data.length < 20) { // Assume 20 is page limit
+                        hasMore = false;
+                        sentinel.style.display = 'none';
+                        noMoreMsg.style.display = 'block';
+                    } else {
+                        hasMore = true;
+                        sentinel.style.display = 'flex';
+                    }
+                } else {
+                    if (!append) grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;">No widgets found.</p>';
+                    hasMore = false;
+                    sentinel.style.display = 'none';
+                }
+
+            } catch (e) {
+                console.error(e);
+                if (!append) errorView.style.display = 'flex';
+            } finally {
+                isLoading = false;
+            }
+        }
+
+        function createWidgetCard(widget) {
+            const card = document.createElement('div');
+            card.className = 'wallpaper-card';
+
+            const minVersion = widget.min_version || 1;
+            const isDisabled = minVersion > CURRENT_APP_VERSION;
+
+            if (isDisabled) card.classList.add('is-disabled');
+            else card.onclick = () => showLightbox(widget, false);
+
+            if (installedWidgetIds.includes(widget.id.toString())) {
+                const label = document.createElement('div');
+                label.className = 'card-label installed-label';
+                label.textContent = 'Installed';
+                card.appendChild(label);
+            }
+
+            const img = document.createElement('img');
+            img.src = widget.thumbnailUrl ? `/proxy_thumbnail?url=${encodeURIComponent(widget.thumbnailUrl)}` : '';
+            img.loading = 'lazy';
+            card.appendChild(img);
+
+            const info = document.createElement('div');
+            info.className = 'wallpaper-info';
+            const title = document.createElement('h3');
+            title.textContent = widget.themeName;
+            info.appendChild(title);
+
+            if (isDisabled) {
+                const warn = document.createElement('p');
+                warn.style.color = '#ff9a9a';
+                warn.textContent = `Requires App v${minVersion}`;
+                info.appendChild(warn);
+            }
+
+            card.appendChild(info);
+            return card;
+        }
+
+        function showLightbox(widget, isDisabled) {
+            currentTheme = widget;
+            document.getElementById('lightbox-img').src = widget.thumbnailUrl || '';
+            document.getElementById('lightbox-title').textContent = widget.themeName;
+            document.getElementById('lightbox-author').textContent = `by ${widget.author || 'Unknown'}`;
+            document.getElementById('lightbox-description').textContent = widget.description;
+
+            const btn = document.getElementById('lightbox-install');
+            if (installedWidgetIds.includes(widget.id.toString())) {
+                btn.disabled = true;
+                btn.textContent = 'Installed';
+            } else {
+                btn.disabled = false;
+                btn.textContent = 'Install';
+            }
+
+            lightboxOverlay.style.display = 'flex';
+        }
+
+        function hideLightbox() {
+            lightboxOverlay.style.display = 'none';
+        }
+
+        function showNotification(msg, type = 'success') {
+            const toast = document.getElementById('notification-toast');
+            const msgEl = document.getElementById('notification-msg');
+            msgEl.textContent = msg;
+            toast.className = `notification-toast show ${type}`;
+            setTimeout(() => {
+                toast.className = 'notification-toast';
+            }, 3000);
+        }
+
+        async function performInstall() {
+            const btn = document.getElementById('lightbox-install');
+            btn.disabled = true;
+            btn.textContent = 'Installing...';
+
+            try {
+                const response = await fetch('/install_widget', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ widgetId: currentTheme.id })
+                });
+                if (!response.ok) throw new Error("Failed");
+
+                btn.textContent = 'Installed!';
+                showNotification("Widget installed! Please restart the engine.", "success");
+                setTimeout(hideLightbox, 2000);
+
+                installedWidgetIds.push(currentTheme.id.toString());
+                // Update UI without reload?
+            } catch (e) {
+                btn.textContent = 'Error';
+                btn.disabled = false;
+                showNotification("Installation failed: " + e, "error");
+            }
+        }
+
+        // Init
+        document.addEventListener('DOMContentLoaded', async () => {
+            await initializeSettings();
+            fetchWidgets();
+            const loader = document.getElementById('loader');
+            if (loader) {
+                loader.style.opacity = '0';
+                setTimeout(() => loader.style.display = 'none', 500);
+            }
+        });
+
+        searchForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            currentSearchQuery = searchInput.value;
+            currentPage = 1;
+            fetchWidgets();
+        });
+
+        document.getElementById('lightbox-install').onclick = performInstall;
+        lightboxClose.onclick = hideLightbox;
+        lightboxOverlay.onclick = (e) => { if (e.target === lightboxOverlay) hideLightbox(); };
+        retryBtn.onclick = () => { currentPage = 1; fetchWidgets(); };
+
+        // Observer
+        const observer = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting && !isLoading && hasMore) {
+                currentPage++;
+                fetchWidgets(true);
+            }
+        });
+        observer.observe(sentinel);
+
+        // External link mocks
+        window.openExternalLinkModal = function (url) { window.open(url, '_blank'); } // simplified for widgets page
+        window.closeExternalLinkModal = function () { }
+        window.confirmExternalLink = function () { }
+
+        // Lenis
+        const lenis = new Lenis({ wheelMultiplier: 1.5, lerp: 0.08, smoothWheel: true });
+        function raf(time) { lenis.raf(time); requestAnimationFrame(raf); }
+        requestAnimationFrame(raf);
+    </script>
+</body>
+
+</html>

@@ -568,6 +568,10 @@
             background-color: var(--3d-color);
         }
 
+        .type-label.widget {
+            background-color: #ff9800;
+        }
+
         .infinite-loader {
             grid-column: 1 / -1;
             display: flex;
@@ -689,6 +693,38 @@
             box-shadow: 0 4px 12px rgba(13, 110, 253, 0.4);
             transform: translateY(-1px);
         }
+
+        .notification-toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-left: 4px solid var(--primary-color);
+            padding: 15px 20px;
+            border-radius: 4px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 10000;
+        }
+
+        .notification-toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .notification-toast.error {
+            border-left-color: var(--danger-color);
+        }
+
+        .notification-toast.success {
+            border-left-color: var(--success-color);
+        }
     </style>
     <script src="/library/lenis.min.js"></script>
 </head>
@@ -696,6 +732,9 @@
 <body>
     <div id="loader">
         <div class="spinner"></div>
+    </div>
+    <div id="notification-toast" class="notification-toast">
+        <span id="notification-msg"></span>
     </div>
 
     <header class="header">
@@ -745,6 +784,16 @@
             </div>
             <div id="featured-grid" class="wallpaper-grid"></div>
         </div>
+
+        <div id="widgets-section" style="display: none; margin-bottom: 2.5rem;">
+            <div class="featured-header">
+                <h2 style="border: none; padding: 0; margin: 0;">Widgets</h2>
+                <a href="/widgets.html" class="featured-see-more">See More <span>&rarr;</span></a>
+            </div>
+            <div id="widgets-grid" class="wallpaper-grid"></div>
+        </div>
+
+
         <h2 id="page-title">New Releases</h2>
 
         <div id="wallpaper-grid-valid" class="wallpaper-grid"></div>
@@ -815,9 +864,44 @@
                 showEndpointError();
             } else {
                 fetchFeatured();
+                await fetchInstalledWidgets();
+                fetchWidgets();
                 fetchWallpapers();
             }
         });
+
+        async function fetchWidgets() {
+            const widgetsSection = document.getElementById('widgets-section');
+            const widgetsGrid = document.getElementById('widgets-grid');
+            if (!widgetsSection || !widgetsGrid) return;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}?action=get_widgets&page=1`);
+                if (!response.ok) return;
+                const data = await response.json();
+
+                if (data.data && data.data.length > 0) {
+                    widgetsGrid.innerHTML = '';
+                    data.data.slice(0, 4).forEach(widget => {
+                        const cardData = {
+                            id: widget.id,
+                            themeName: widget.widgetName || widget.name,
+                            author: widget.author,
+                            thumbnailUrl: widget.thumbnailUrl,
+                            description: widget.description,
+                            min_version: widget.min_version,
+                            zipUrl: widget.zipUrl,
+                            type: 'widget',
+                            isWidget: true
+                        };
+                        widgetsGrid.appendChild(createWallpaperCard(cardData));
+                    });
+                    widgetsSection.style.display = 'block';
+                }
+            } catch (e) {
+                console.error("Error fetching widgets:", e);
+            }
+        }
         const API_PAGE_LIMIT = 50;
 
         let CURRENT_APP_VERSION = 1;
@@ -825,8 +909,23 @@
         let currentSearchQuery = '';
         let currentTheme = null;
         let installedThemeIds = [];
+        let installedWidgetIds = [];
         let featuredData = [];
         const featuredSection = document.getElementById('featured-section');
+
+        async function fetchInstalledWidgets() {
+            try {
+                const response = await fetch('/widgets/index.json');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.widgets) {
+                        installedWidgetIds = data.widgets.map(w => w.id.toString());
+                    }
+                }
+            } catch (e) {
+                console.error("Error fetching installed widgets:", e);
+            }
+        }
         const featuredGrid = document.getElementById('featured-grid');
 
         const lightboxOverlay = document.getElementById('lightbox-overlay');
@@ -1078,7 +1177,10 @@
                 };
             }
 
-            if (installedThemeIds.includes(theme.id.toString())) {
+            if (
+                (theme.type === 'widget' && installedWidgetIds.includes(theme.id.toString())) ||
+                installedThemeIds.includes(theme.id.toString())
+            ) {
                 const label = document.createElement('div');
                 label.className = 'card-label installed-label';
                 label.textContent = 'Installed';
@@ -1096,6 +1198,9 @@
             } else if (type === 'app') {
                 typeLabelText = 'APP';
                 typeClass = 'app';
+            } else if (type === 'widget') {
+                typeLabelText = 'WIDGET';
+                typeClass = 'widget';
             } else {
                 typeLabelText = '3D';
                 typeClass = 'model3d';
@@ -1177,7 +1282,10 @@
             if (minVersion > CURRENT_APP_VERSION) {
                 installBtn.disabled = true;
                 installBtn.textContent = `Requires App v${minVersion}`;
-            } else if (installedThemeIds.includes(theme.id.toString())) {
+            } else if (
+                (theme.type === 'widget' && installedWidgetIds.includes(theme.id.toString())) ||
+                installedThemeIds.includes(theme.id.toString())
+            ) {
                 installBtn.disabled = true;
                 installBtn.textContent = 'Installed';
             } else {
@@ -1197,6 +1305,11 @@
             const minVersion = currentTheme.min_version || 1;
 
             if (!currentTheme || minVersion > CURRENT_APP_VERSION) {
+                return;
+            }
+
+            if (currentTheme.isWidget) {
+                performWidgetInstall();
                 return;
             }
 
@@ -1237,6 +1350,57 @@
                 console.error("Error installing theme:", err);
                 installBtn.textContent = `Error: ${err.message}`;
                 installBtn.disabled = false;
+            }
+        }
+
+        function showNotification(msg, type = 'success') {
+            const toast = document.getElementById('notification-toast');
+            const msgEl = document.getElementById('notification-msg');
+            msgEl.textContent = msg;
+            toast.className = `notification-toast show ${type}`;
+            setTimeout(() => {
+                toast.className = 'notification-toast';
+            }, 3000);
+        }
+
+        async function performWidgetInstall() {
+            const installBtn = document.getElementById('lightbox-install');
+            installBtn.disabled = true;
+            installBtn.textContent = 'Installing Widget...';
+
+            try {
+                const response = await fetch('/install_widget', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ widgetId: currentTheme.id })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Installation failed.');
+                }
+
+                installBtn.textContent = 'Installed!';
+                showNotification("Widget installed successfully! Please restart the engine.", "success");
+
+                installedWidgetIds.push(currentTheme.id.toString());
+
+                const card = document.querySelector(`.wallpaper-card[data-id="${currentTheme.id}"]`);
+                if (card && !card.querySelector('.installed-label')) {
+                    const label = document.createElement('div');
+                    label.className = 'card-label installed-label';
+                    label.textContent = 'Installed';
+                    card.appendChild(label);
+                }
+
+                setTimeout(hideLightbox, 2000);
+
+            } catch (err) {
+                console.error("Error installing widget:", err);
+                installBtn.textContent = `Error: ${err.message}`;
+                installBtn.disabled = false;
+                showNotification("Installation failed: " + err.message, "error");
             }
         }
 
