@@ -35,7 +35,7 @@ except ImportError:
     print("> No embedded engine assets found. Running in dev (file-system) mode.")
 
 try:
-    from frontend import library_assets
+    from library.jsm import library_assets
     HAS_LIBRARY_ASSETS = True
     print("> Loaded embedded library assets (Three.js).")
 except ImportError:
