@@ -14,9 +14,11 @@ def run_build():
         ("hdr", "hdr"),
         ("build", "build"),
         ("library", "library"),
+        ("widgets", "widgets"),
         ("app_config.json", None), 
-
-        ("1.ico", None) 
+        ("1.ico", None),
+        ("2.ico",None),
+        ("3.ico",None)
 
     ]
 

@@ -33,6 +33,14 @@ try:
 except ImportError:
     HAS_EMBEDDED_ASSETS = False
     print("> No embedded engine assets found. Running in dev (file-system) mode.")
+
+try:
+    from frontend import library_assets
+    HAS_LIBRARY_ASSETS = True
+    print("> Loaded embedded library assets (Three.js).")
+except ImportError:
+    HAS_LIBRARY_ASSETS = False
+    print("> No embedded library assets found. Will serve from file system.")
 def get_real_screen_scale():
     try:
         try:
@@ -383,6 +391,40 @@ class MyHandler(http.server.SimpleHTTPRequestHandler):
                         return
                 else:
                     self.send_error(404, "No 'modelFile' specified in config.json.")
+                    return
+
+            elif clean_path.startswith('/library/jsm/'):
+                library_path = clean_path.lstrip('/').replace('library/', '') 
+                ext = os.path.splitext(clean_path)[1].lower()
+                mime_type = {
+                    ".js": "application/javascript",
+                    ".json": "application/json"
+                }.get(ext, "application/octet-stream")
+                
+                if HAS_LIBRARY_ASSETS:
+                    asset_data = library_assets.get_library_asset(library_path)
+                    if asset_data:
+                        self.send_response(200)
+                        self.send_header('Content-type', mime_type)
+                        self.send_header('Cache-Control', 'max-age=31536000')
+                        self.end_headers()
+                        self.wfile.write(asset_data)
+                        return
+                
+                relative_path = clean_path.lstrip('/')
+                file_path = os.path.join(SCRIPT_DIR, relative_path)
+                if os.path.exists(file_path):
+                    try:
+                        with open(file_path, 'rb') as f:
+                            self.send_response(200)
+                            self.send_header('Content-type', mime_type)
+                            self.end_headers()
+                            self.wfile.write(f.read())
+                    except Exception as e:
+                        self.send_error(500, f"Error serving library file: {e}")
+                    return
+                else:
+                    self.send_error(404, f"Library file not found: {clean_path}")
                     return
 
             elif clean_path.startswith('/build/') or clean_path.startswith('/library/') or clean_path.startswith('/hdr/') or clean_path.startswith('/widgets/'):

@@ -14,6 +14,8 @@ ENGINE_FILES = {
     'index.html': 'DATA_INDEX'
 }
 ENGINE_OUTPUT = 'engine_assets.py'
+LIBRARY_DIR = os.path.join('library', 'jsm')
+LIBRARY_OUTPUT = 'library_assets.py'
 
 def write_asset_file(filename, file_map, description):
     output_path = os.path.join(OUTPUT_DIR, filename)
@@ -39,6 +41,55 @@ def write_asset_file(filename, file_map, description):
                 print(f"  {src_file} not found. Skipping.")
                 py_file.write(f'{var_name} = None\n')
     print(f" {description} complete.\n")
+
+def write_library_assets(output_filename, source_dir, description):
+    """Pack all files from a directory recursively into a single Python asset file."""
+    output_path = os.path.join(OUTPUT_DIR, output_filename)
+    print(f" Building {description} into {output_path}...")
+    
+    files_to_pack = {}
+    for root, dirs, files in os.walk(source_dir):
+        for file in files:
+            full_path = os.path.join(root, file)
+            relative_path = os.path.relpath(full_path, os.path.dirname(source_dir))
+            url_path = relative_path.replace(os.sep, '/')
+            files_to_pack[url_path] = full_path
+    
+    with open(output_path, 'w', encoding='utf-8') as py_file:
+        py_file.write(f"# Auto-generated compressed assets for {description}. Do not edit.\n")
+        py_file.write("import base64\n")
+        py_file.write("import zlib\n\n")
+        py_file.write("# Dictionary mapping URL paths to compressed data\n")
+        py_file.write("LIBRARY_DATA = {\n")
+        
+        total_original = 0
+        total_compressed = 0
+        
+        for url_path, full_path in sorted(files_to_pack.items()):
+            try:
+                with open(full_path, 'rb') as f:
+                    raw_bytes = f.read()
+                    compressed = zlib.compress(raw_bytes)
+                    b64_encoded = base64.b64encode(compressed).decode('utf-8')
+                    py_file.write(f'    "{url_path}": "{b64_encoded}",\n')
+                    total_original += len(raw_bytes)
+                    total_compressed += len(b64_encoded)
+                    print(f"   Packed: {url_path} ({len(raw_bytes)} -> {len(b64_encoded)} bytes)")
+            except Exception as e:
+                print(f"   Error packing {full_path}: {e}")
+        
+        py_file.write("}\n\n")
+        py_file.write("def get_library_asset(path):\n")
+        py_file.write('    """Get a library asset by its URL path (e.g., \'jsm/loaders/GLTFLoader.js\')."""\n')
+        py_file.write("    data = LIBRARY_DATA.get(path)\n")
+        py_file.write("    if data:\n")
+        py_file.write("        return zlib.decompress(base64.b64decode(data))\n")
+        py_file.write("    return None\n\n")
+        py_file.write("def has_library_asset(path):\n")
+        py_file.write('    """Check if a library asset exists."""\n')
+        py_file.write("    return path in LIBRARY_DATA\n")
+    
+    print(f" {description} complete. Total: {total_original} -> {total_compressed} bytes ({len(files_to_pack)} files)\n")
 def build():
     if not os.path.exists(OUTPUT_DIR):
         os.makedirs(OUTPUT_DIR)
@@ -46,6 +97,10 @@ def build():
             f.write("") 
     write_asset_file(LAUNCHER_OUTPUT, LAUNCHER_FILES, "Launcher UI")
     write_asset_file(ENGINE_OUTPUT, ENGINE_FILES, "Engine Core")
+    if os.path.exists(LIBRARY_DIR):
+        write_library_assets(LIBRARY_OUTPUT, LIBRARY_DIR, "Three.js Library")
+    else:
+        print(f" Warning: {LIBRARY_DIR} not found. Skipping library assets.")
     print("ALL BUILDS COMPLETE! Ready for compilation.")
 if __name__ == "__main__":
     build()
