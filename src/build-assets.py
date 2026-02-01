@@ -6,7 +6,8 @@ LAUNCHER_FILES = {
     'home.html': 'DATA_HOME',
     'settings.html': 'DATA_SETTINGS',
     'discover.html': 'DATA_DISCOVER',
-    'featured.html': 'DATA_FEATURED'
+    'featured.html': 'DATA_FEATURED',
+    'widgets.html': 'DATA_WIDGETS'
 }
 LAUNCHER_OUTPUT = 'frontend_assets.py'
 ENGINE_FILES = {

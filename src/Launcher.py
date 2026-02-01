@@ -90,6 +90,7 @@ EDITOR_HTML = api_config.EDITOR_HTML
 DISCOVER_HTML = api_config.DISCOVER_HTML
 SETTINGS_HTML = api_config.SETTINGS_HTML
 FEATURED_HTML = api_config.FEATURED_HTML
+WIDGETS_HTML = api_config.WIDGETS_HTML
 
 APP_SECURITY_TOKEN = ''.join(random.choices(string.digits, k=12))
 print(f"Authentication Token (User-Agent): {APP_SECURITY_TOKEN}")
@@ -458,6 +459,7 @@ class EditorHTTPHandler(http.server.SimpleHTTPRequestHandler):
             f'/{DISCOVER_HTML}': ('DATA_DISCOVER', DISCOVER_HTML),
             f'/{SETTINGS_HTML}': ('DATA_SETTINGS', SETTINGS_HTML),
             f'/{FEATURED_HTML}': ('DATA_FEATURED', FEATURED_HTML),
+            f'/{WIDGETS_HTML}': ('DATA_WIDGETS', WIDGETS_HTML),
         }
 
         if self.path in routes:
@@ -593,8 +595,8 @@ class EditorHTTPHandler(http.server.SimpleHTTPRequestHandler):
                 data = json.loads(post_body)
 
                 app_config = read_app_config()
-                if 'tour' in data:
-                    app_config['tour'] = bool(data.get('tour'))
+                if 'tour_v2' in data:
+                    app_config['tour_v2'] = bool(data.get('tour_v2'))
                 new_auto_start = data.get('auto_start')
                 if new_auto_start is not None:
                     app_config['auto_start'] = bool(new_auto_start)
@@ -927,7 +929,6 @@ class EditorHTTPHandler(http.server.SimpleHTTPRequestHandler):
                     "id": str(widget_id),
                     "name": widget_data.get('widgetName', f"Widget {widget_id}"),
                     "author": widget_data.get('author', 'Unknown'),
-                    "version": widget_data.get('version', 1),
                 }
                 
                 if existing_entry:

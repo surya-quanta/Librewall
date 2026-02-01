@@ -81,9 +81,29 @@
             line-height: 1.6;
         }
 
+        .driver-popover.driverjs-theme .driver-popover-description video {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            max-width: 100%;
+            height: auto;
+        }
+
         .driver-popover.driverjs-theme.wide-box {
             min-width: 500px !important;
             width: 500px !important;
+        }
+
+        .driver-popover.driverjs-theme.large-video-popover {
+            width: 80vw !important;
+            max-width: 80vw !important;
+            min-width: 80vw !important;
+            max-height: 80vh !important;
+        }
+
+        .driver-popover.driverjs-theme.large-video-popover .driver-popover-description video {
+            max-height: 65vh;
+            object-fit: contain;
         }
 
         .driver-popover.driverjs-theme button {
@@ -106,10 +126,6 @@
 
         .driver-active-element {
             pointer-events: none !important;
-        }
-
-        body.tour-mode .wallpaper-card:not(#tour-default-card) .image-container {
-            visibility: hidden;
         }
 
         body.tour-mode header button:not(.driver-highlighted-element) {
@@ -1691,7 +1707,7 @@
                 const r = await fetch('/get_app_settings');
                 const config = await r.json();
 
-                if (!config.tour) {
+                if (!config.tour_v2) {
                     document.getElementById('welcome-modal').style.display = 'flex';
                 }
             } catch (e) {
@@ -1705,7 +1721,7 @@
                 await fetch('/save_app_settings', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ tour: true })
+                    body: JSON.stringify({ tour_v2: true })
                 });
                 document.getElementById('welcome-modal').style.display = 'none';
             } catch (e) {
@@ -1740,6 +1756,7 @@
                 steps: [
                     { element: '#refresh-btn', popover: { title: 'Refresh Library', description: 'Reload your list to see changes.' } },
                     { element: '#discover-btn', popover: { title: 'Discover Online', description: 'Browse community themes.' } },
+                    { element: '#manage-widgets-btn', popover: { title: 'Manage Widgets', description: 'View and manage your installed widgets here.' } },
                     { element: '#import-btn', popover: { title: 'Import Theme', description: 'Load .zip files manually.' } },
                     { element: '#settings-btn', popover: { title: 'Global Settings', description: 'Configure app preferences.' } },
                     { element: '#engine-toggle-btn', popover: { title: 'Engine Status', description: 'Start/Stop the engine.' } },
@@ -1774,7 +1791,23 @@
                                 if (delBtn) delBtn.style.display = 'none';
                             }
                             hideLightbox(true);
-                            document.body.classList.remove('tour-mode');
+                        }
+                    },
+                    {
+                        popover: {
+                            title: 'Widgets',
+                            description: '<p style="margin-bottom:10px;">Available for <b>3D wallpapers</b>. Customize, move, resize widgets, change their settings, and get more from the marketplace!</p><video src="/library/assets/widget_modifacation.webm" autoplay loop muted playsinline style="width:100%; border-radius:8px; margin-top:8px;"></video>',
+                            popoverClass: 'driverjs-theme large-video-popover'
+                        }
+                    },
+                    {
+                        popover: {
+                            title: 'Widget Templates',
+                            description: '<p style="margin-bottom:10px;">Also for <b>3D wallpapers</b>. Save widget settings and layouts from one wallpaper to easily apply to others!</p><video src="/library/assets/tamplate.webm" autoplay loop muted playsinline style="width:100%; border-radius:8px; margin-top:8px;"></video>',
+                            popoverClass: 'driverjs-theme large-video-popover',
+                            onDeselected: () => {
+                                document.body.classList.remove('tour-mode');
+                            }
                         }
                     }
                 ]
@@ -1900,7 +1933,6 @@
                             <p>by ${widget.author}</p>
                         </div>
                         <div class="widget-card-meta">
-                            <span>v${widget.version}</span>
                             <span class="widget-status ${isCorrupted ? 'corrupted' : 'active'}">${isCorrupted ? 'Corrupted' : 'Active'}</span>
                         </div>
                     `;
@@ -1938,8 +1970,6 @@
 
                 showNotification('Widget deleted successfully', 'success');
                 closeDeleteConfirm();
-
-                // Refresh list
                 setTimeout(openManageWidgets, 300);
 
             } catch (e) {

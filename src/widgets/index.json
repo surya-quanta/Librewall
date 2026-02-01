@@ -3,37 +3,32 @@
         {
             "id": "clock",
             "name": "Live Clock",
-            "author": "Librewall",
-            "authorUrl": "https://librewall.app",
-            "version": "1.0.0"
+            "author": "Dkydivyansh",
+            "authorUrl": "https://dkydivyansh.com"
         },
         {
             "id": "traffic-data",
             "name": "Traffic Data",
-            "author": "Librewall",
-            "authorUrl": "https://librewall.app",
-            "version": "1.0.0"
+            "author": "Dkydivyansh",
+            "authorUrl": "https://dkydivyansh.com"
         },
         {
             "id": "listening-ports",
             "name": "Listening Ports",
-            "author": "Librewall",
-            "authorUrl": "https://librewall.app",
-            "version": "1.0.0"
+            "author": "Dkydivyansh",
+            "authorUrl": "https://dkydivyansh.com"
         },
         {
             "id": "live-traffic-log",
             "name": "Live Traffic Log",
-            "author": "Librewall",
-            "authorUrl": "https://librewall.app",
-            "version": "1.0.0"
+            "author": "Dkydivyansh",
+            "authorUrl": "https://dkydivyansh.com"
         },
         {
             "id": "active-connections",
             "name": "Active Connections",
-            "author": "Librewall",
-            "authorUrl": "https://librewall.app",
-            "version": "1.0.0"
+            "author": "Dkydivyansh",
+            "authorUrl": "https://dkydivyansh.com"
         }
     ]
 }

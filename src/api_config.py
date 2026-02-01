@@ -16,6 +16,7 @@ EDITOR_HTML = 'home.html'
 DISCOVER_HTML = 'discover.html'
 SETTINGS_HTML = 'settings.html'
 FEATURED_HTML = 'featured.html'
+WIDGETS_HTML = 'widgets.html'
 
 # Engine Settings
 ENGINE_HTTP_PORT = 60600
