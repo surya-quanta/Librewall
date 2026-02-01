@@ -19,6 +19,11 @@ LIBRARY_OUTPUT_DIR = os.path.join('library', 'jsm')
 LIBRARY_OUTPUT = 'library_assets.py'
 BUILD_LIBRARY = True
 
+THREEJS_DIR = 'threejs'
+THREEJS_OUTPUT_DIR = os.path.join('library', 'threejs')
+THREEJS_OUTPUT = 'threejs_assets.py'
+BUILD_THREEJS = True
+
 def write_asset_file(filename, file_map, description):
     output_path = os.path.join(OUTPUT_DIR, filename)
     print(f" Building {description} into {output_path}...")
@@ -119,13 +124,16 @@ def write_library_assets_full(output_path, source_dir, description):
     print(f" Building {description} into {output_path}...")
     
     files_to_pack = {}
+    base_name = os.path.basename(source_dir)
     for root, dirs, files in os.walk(source_dir):
         for file in files:
-            if file.endswith('.py') or file == '__init__.py':
+            if file.endswith('.py') or file == '__init__.py' or file.endswith('.pyc'):
+                continue
+            if '__pycache__' in root:
                 continue
             full_path = os.path.join(root, file)
-            relative_path = os.path.relpath(full_path, os.path.dirname(source_dir))
-            url_path = relative_path.replace(os.sep, '/')
+            rel_from_source = os.path.relpath(full_path, source_dir)
+            url_path = f"{base_name}/{rel_from_source}".replace(os.sep, '/')
             files_to_pack[url_path] = full_path
     
     with open(output_path, 'w', encoding='utf-8') as py_file:
@@ -179,9 +187,21 @@ def build():
             with open(init_file, 'w') as f:
                 f.write("")
         library_output_path = os.path.join(LIBRARY_OUTPUT_DIR, LIBRARY_OUTPUT)
-        write_library_assets_full(library_output_path, LIBRARY_DIR, "Three.js Library")
+        write_library_assets_full(library_output_path, LIBRARY_DIR, "Three.js JSM Library")
     else:
-        print(" Skipping Three.js Library build (BUILD_LIBRARY = False)")
+        print(" Skipping Three.js JSM Library build (BUILD_LIBRARY = False)")
+    
+    if BUILD_THREEJS:
+        if not os.path.exists(THREEJS_OUTPUT_DIR):
+            os.makedirs(THREEJS_OUTPUT_DIR)
+        init_file = os.path.join(THREEJS_OUTPUT_DIR, '__init__.py')
+        if not os.path.exists(init_file):
+            with open(init_file, 'w') as f:
+                f.write("")
+        threejs_output_path = os.path.join(THREEJS_OUTPUT_DIR, THREEJS_OUTPUT)
+        write_library_assets_full(threejs_output_path, THREEJS_DIR, "Three.js Core")
+    else:
+        print(" Skipping Three.js Core build (BUILD_THREEJS = False)")
     print("ALL BUILDS COMPLETE! Ready for compilation.")
 if __name__ == "__main__":
     build()

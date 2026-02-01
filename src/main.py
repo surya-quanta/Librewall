@@ -37,10 +37,18 @@ except ImportError:
 try:
     from library.jsm import library_assets
     HAS_LIBRARY_ASSETS = True
-    print("> Loaded embedded library assets (Three.js).")
+    print("> Loaded embedded library assets (Three.js JSM).")
 except ImportError:
     HAS_LIBRARY_ASSETS = False
     print("> No embedded library assets found. Will serve from file system.")
+
+try:
+    from library.threejs import threejs_assets
+    HAS_THREEJS_ASSETS = True
+    print("> Loaded embedded Three.js core assets.")
+except ImportError:
+    HAS_THREEJS_ASSETS = False
+    print("> No embedded Three.js core assets found. Will serve from file system.")
 def get_real_screen_scale():
     try:
         try:
@@ -427,7 +435,45 @@ class MyHandler(http.server.SimpleHTTPRequestHandler):
                     self.send_error(404, f"Library file not found: {clean_path}")
                     return
 
-            elif clean_path.startswith('/build/') or clean_path.startswith('/library/') or clean_path.startswith('/hdr/') or clean_path.startswith('/widgets/'):
+            elif clean_path.startswith('/threejs/') or clean_path.startswith('/build/'):
+                if clean_path.startswith('/build/'):
+                     threejs_path = clean_path.replace('/build/', 'threejs/', 1) 
+                else:
+                     threejs_path = clean_path.lstrip('/')
+
+                ext = os.path.splitext(clean_path)[1].lower()
+                mime_type = {
+                    ".js": "application/javascript",
+                    ".css": "text/css",
+                    ".json": "application/json"
+                }.get(ext, "application/octet-stream")
+                
+                if HAS_THREEJS_ASSETS:
+                    asset_data = threejs_assets.get_library_asset(threejs_path)
+                    if asset_data:
+                        self.send_response(200)
+                        self.send_header('Content-type', mime_type)
+                        self.send_header('Cache-Control', 'max-age=31536000')
+                        self.end_headers()
+                        self.wfile.write(asset_data)
+                        return
+                
+                file_path = os.path.join(SCRIPT_DIR, threejs_path)
+                if os.path.exists(file_path):
+                    try:
+                        with open(file_path, 'rb') as f:
+                            self.send_response(200)
+                            self.send_header('Content-type', mime_type)
+                            self.end_headers()
+                            self.wfile.write(f.read())
+                    except Exception as e:
+                        self.send_error(500, f"Error serving threejs file: {e}")
+                    return
+                else:
+                    self.send_error(404, f"ThreeJS file not found: {clean_path}")
+                    return
+
+            elif clean_path.startswith('/library/') or clean_path.startswith('/hdr/') or clean_path.startswith('/widgets/'):
                 relative_path = clean_path.lstrip('/')
                 file_path = os.path.join(SCRIPT_DIR, relative_path)
             else:

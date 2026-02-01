@@ -12,7 +12,6 @@ def run_build():
         ("wallpapers", "wallpapers"),
         ("include", "include"),
         ("hdr", "hdr"),
-        ("build", "build"),
         ("library", "library"),
         ("widgets", "widgets"),
         ("app_config.json", None), 
