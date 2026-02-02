@@ -9,6 +9,18 @@ if sys.stdout is None or sys.stderr is None:
     sys.stdout = NullWriter()
     sys.stderr = NullWriter()
 import api_config
+import builtins
+
+if not api_config.developer_enabled:
+   class NullWriter:
+       def write(self, text): pass
+       def flush(self): pass
+       def isatty(self): return False
+   
+   def print(*args, **kwargs): pass
+   builtins.print = print
+   sys.stdout = NullWriter()
+   sys.stderr = NullWriter()
 import ctypes
 from ctypes import wintypes
 import win32gui
@@ -1192,7 +1204,10 @@ if __name__ == "__main__":
     except: pass
     check_single_instance()
     AUTH_TOKEN = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(50))
-    os.environ["QTWEBENGINE_REMOTE_DEBUGGING"] = "9222"
+    
+    if api_config.developer_enabled:
+        print("Debug Mode Enabled: Remote debugging active on port 9222")
+        os.environ["QTWEBENGINE_REMOTE_DEBUGGING"] = "9222"
 
     import secrets
     import string

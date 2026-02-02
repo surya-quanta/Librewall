@@ -3,10 +3,10 @@
 block_cipher = None
 
 a_gui = Analysis(
-    ['Z:\\projects\\project-wall\\Launcher.py'],
-    pathex=['Z:\\projects\\project-wall'],
+    ['Launcher.py'],
+    pathex=['.'],
     binaries=[],
-    datas=[('Z:\\projects\\project-wall\\1.ico', '.')], # Launcher icon
+    datas=[('1.ico', '.')], # Launcher icon
     hiddenimports=[],
     hookspath=[],
     runtime_hooks=[],
@@ -16,11 +16,11 @@ a_gui = Analysis(
 )
 
 a_engine = Analysis(
-    ['Z:\\projects\\project-wall\\main.py'],
-    pathex=['Z:\\projects\\project-wall'],
+    ['main.py'],
+    pathex=['.'],
     binaries=[],
     datas=[
-        ('Z:\\projects\\project-wall\\3.ico', '.') # Engine icon
+        ('3.ico', '.') # Engine icon
         # Removed 'icon.ico' and 'wallpapers' as requested
     ],
     hiddenimports=['port_map', 'video_widget', 'frontend.engine_assets'], 
@@ -45,7 +45,7 @@ exe_gui = EXE(
     strip=False,
     upx=True,
     console=False,
-    icon='Z:\\projects\\project-wall\\1.ico',
+    icon='1.ico',
 )
 
 exe_engine = EXE(
@@ -59,7 +59,7 @@ exe_engine = EXE(
     strip=False,
     upx=True,
     console=False,
-    icon='Z:\\projects\\project-wall\\3.ico',
+    icon='3.ico',
 )
 
 coll = COLLECT(
