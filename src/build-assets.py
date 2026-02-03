@@ -17,12 +17,12 @@ ENGINE_OUTPUT = 'engine_assets.py'
 LIBRARY_DIR = os.path.join('library', 'jsm')
 LIBRARY_OUTPUT_DIR = os.path.join('library', 'jsm')
 LIBRARY_OUTPUT = 'library_assets.py'
-BUILD_LIBRARY = True
+BUILD_LIBRARY = False
 
 THREEJS_DIR = 'threejs'
 THREEJS_OUTPUT_DIR = os.path.join('library', 'threejs')
 THREEJS_OUTPUT = 'threejs_assets.py'
-BUILD_THREEJS = True
+BUILD_THREEJS = False
 
 def write_asset_file(filename, file_map, description):
     output_path = os.path.join(OUTPUT_DIR, filename)
