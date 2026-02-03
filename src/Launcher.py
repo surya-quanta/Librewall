@@ -1053,7 +1053,6 @@ class EditorHTTPHandler(http.server.SimpleHTTPRequestHandler):
                     json.dump(registry_data, f, indent=4)
 
                 if os.path.isdir(widget_path):
-                    import shutil
                     shutil.rmtree(widget_path)
                 
                 print(f"Successfully deleted widget: {widget_id}")
