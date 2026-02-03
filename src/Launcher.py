@@ -78,6 +78,14 @@ except ImportError:
     HAS_EMBEDDED_ASSETS = False
     print(" No embedded assets found. Running in dev (file-system) mode.")
 
+try:
+    from library.threejs import threejs_assets
+    HAS_THREEJS_ASSETS = True
+    print(" Loaded threejs/driver.js assets.")
+except ImportError:
+    HAS_THREEJS_ASSETS = False
+    print(" No threejs assets found. Running in dev mode.")
+
 
 
 API_BASE_URL = api_config.base_url
@@ -580,6 +588,43 @@ class EditorHTTPHandler(http.server.SimpleHTTPRequestHandler):
                 print(f"Error in proxy_thumbnail: {e}")
                 self.send_json_response(500, {'error': str(e)})
             return
+
+        elif self.path.startswith('/threejs/'):
+            threejs_path = self.path.lstrip('/')
+            ext = os.path.splitext(self.path)[1].lower()
+            mime_type = {
+                ".js": "application/javascript",
+                ".css": "text/css",
+                ".json": "application/json"
+            }.get(ext, "application/octet-stream")
+            
+            if HAS_THREEJS_ASSETS:
+                asset_data = threejs_assets.get_library_asset(threejs_path)
+                if asset_data:
+                    self.send_response(200)
+                    self.send_header('Content-type', mime_type)
+                    self.send_header('Cache-Control', 'max-age=31536000')
+                    self.send_header('Content-Length', str(len(asset_data)))
+                    self.end_headers()
+                    self.wfile.write(asset_data)
+                    return
+            
+            file_path = os.path.join(SERVER_ROOT, threejs_path)
+            if os.path.exists(file_path):
+                try:
+                    with open(file_path, 'rb') as f:
+                        data = f.read()
+                    self.send_response(200)
+                    self.send_header('Content-type', mime_type)
+                    self.send_header('Content-Length', str(len(data)))
+                    self.end_headers()
+                    self.wfile.write(data)
+                except Exception as e:
+                    self.send_error(500, f"Error serving threejs file: {e}")
+                return
+            else:
+                self.send_error(404, f"ThreeJS file not found: {self.path}")
+                return
 
         return super().do_GET()
 
