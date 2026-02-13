@@ -457,6 +457,10 @@ class EditorHTTPHandler(http.server.SimpleHTTPRequestHandler):
         user_agent = self.headers.get('User-Agent', '')
         return user_agent == APP_SECURITY_TOKEN
 
+    def do_HEAD(self):
+        """Handle HEAD requests — delegates to do_GET so AppData paths resolve."""
+        self.do_GET()
+
     def do_GET(self):
         if not self.validate_request():
             self.send_error(403, "Forbidden: Access Denied")
@@ -627,8 +631,9 @@ class EditorHTTPHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_error(404, f"ThreeJS file not found: {self.path}")
                 return
 
-        if self.path.startswith(f'/{WALLPAPERS_DIR}/') or self.path.startswith('/widgets/'):
-            relative_path = self.path.lstrip('/')
+        clean_path = self.path.split('?')[0]
+        if clean_path.startswith(f'/{WALLPAPERS_DIR}/') or clean_path.startswith('/widgets/'):
+            relative_path = clean_path.lstrip('/')
             file_path = os.path.join(handler.get_appdata_dir(), relative_path)
             if os.path.isfile(file_path):
                 ext = os.path.splitext(file_path)[1].lower()
