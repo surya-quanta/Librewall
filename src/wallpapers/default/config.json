@@ -67,5 +67,7 @@
     "description": "A abstract 3D model with customizable background and lighting.",
     "thumbnailImage": "image.png"
   },
-  "Enable_Global_Widget": true
+  "Enable_Global_Widget": true,
+  "fpsLimit": 0,
+  "qualityPreset": "ultra"
 }

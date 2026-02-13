@@ -9,6 +9,7 @@ if sys.stdout is None or sys.stderr is None:
     sys.stderr = NullWriter()
 
 import api_config
+import handler
 import builtins
 
 if not api_config.developer_enabled:
@@ -108,7 +109,7 @@ else:
     SERVER_ROOT = os.path.abspath(os.path.dirname(__file__))
 print(f"Server Root detected as: {SERVER_ROOT}")
 APP_CONFIG_FILE = api_config.APP_CONFIG_FILE
-THUMBNAIL_CACHE_DIR = 'thumbnail_cache'
+THUMBNAIL_CACHE_DIR = api_config.THUMBNAIL_CACHE_DIR
 user32   = ctypes.windll.user32
 kernel32 = ctypes.windll.kernel32
 
@@ -237,11 +238,11 @@ else:
     print("WARNING: No 'engine.exe' or 'main.py' found in server root.")
 
 def read_app_config():
-    config_path = os.path.join(SERVER_ROOT, APP_CONFIG_FILE)
+    config_path = handler.get_app_config_path()
 
     defaults = {'active_theme': '', 'port': 8080, 'auto_start': True} 
     if not os.path.isfile(config_path):
-        print(f"Warning: {APP_CONFIG_FILE} not found. Using defaults.")
+        print(f"Warning: {APP_CONFIG_FILE} not found at {config_path}. Using defaults.")
         return defaults
     try:
         with open(config_path, 'r', encoding='utf-8') as f:
@@ -379,7 +380,7 @@ def scan_all_wallpapers():
     app_config = read_app_config()
     active_theme_id = app_config.get('active_theme')
 
-    base_dir = os.path.join(SERVER_ROOT, WALLPAPERS_DIR)
+    base_dir = handler.get_data_path(WALLPAPERS_DIR)
 
     if not os.path.isdir(base_dir):
         print(f"Error: Wallpapers directory not found at {base_dir}")
@@ -494,7 +495,7 @@ class EditorHTTPHandler(http.server.SimpleHTTPRequestHandler):
         if self.path == '/installed_themes':
 
             try:
-                base_dir = os.path.join(SERVER_ROOT, WALLPAPERS_DIR)
+                base_dir = handler.get_data_path(WALLPAPERS_DIR)
                 if not os.path.isdir(base_dir):
                     self.send_json_response(500, {'error': 'Wallpapers directory not found'})
                     return
@@ -535,7 +536,7 @@ class EditorHTTPHandler(http.server.SimpleHTTPRequestHandler):
                     self.send_json_response(400, {'error': 'Missing url parameter'})
                     return
 
-                cache_dir = os.path.join(SERVER_ROOT, THUMBNAIL_CACHE_DIR)
+                cache_dir = handler.get_data_path(THUMBNAIL_CACHE_DIR)
                 os.makedirs(cache_dir, exist_ok=True)
 
                 filename_hash = hashlib.md5(target_url.encode('utf-8')).hexdigest()
@@ -626,6 +627,36 @@ class EditorHTTPHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_error(404, f"ThreeJS file not found: {self.path}")
                 return
 
+        if self.path.startswith(f'/{WALLPAPERS_DIR}/') or self.path.startswith('/widgets/'):
+            relative_path = self.path.lstrip('/')
+            file_path = os.path.join(handler.get_appdata_dir(), relative_path)
+            if os.path.isfile(file_path):
+                ext = os.path.splitext(file_path)[1].lower()
+                mime_map = {
+                    ".css": "text/css", ".js": "application/javascript", ".html": "text/html",
+                    ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+                    ".gif": "image/gif", ".webp": "image/webp", ".bmp": "image/bmp",
+                    ".mp4": "video/mp4", ".webm": "video/webm", ".json": "application/json",
+                    ".glb": "model/gltf-binary", ".gltf": "model/gltf+json",
+                    ".woff2": "font/woff2", ".woff": "font/woff", ".ttf": "font/ttf",
+                    ".hdr": "application/octet-stream",
+                }
+                mime_type = mime_map.get(ext, "application/octet-stream")
+                try:
+                    with open(file_path, 'rb') as f:
+                        data = f.read()
+                    self.send_response(200)
+                    self.send_header('Content-Type', mime_type)
+                    self.send_header('Content-Length', str(len(data)))
+                    self.end_headers()
+                    self.wfile.write(data)
+                except Exception as e:
+                    self.send_error(500, f"Error serving file: {e}")
+                return
+            else:
+                self.send_error(404, f"File not found: {self.path}")
+                return
+
         return super().do_GET()
 
     def do_POST(self):
@@ -646,7 +677,7 @@ class EditorHTTPHandler(http.server.SimpleHTTPRequestHandler):
                 if new_auto_start is not None:
                     app_config['auto_start'] = bool(new_auto_start)
 
-                config_path = os.path.join(SERVER_ROOT, APP_CONFIG_FILE)
+                config_path = handler.get_app_config_path()
                 with open(config_path, 'w', encoding='utf-8') as f:
                     json.dump(app_config, f, indent=2)
 
@@ -672,7 +703,7 @@ class EditorHTTPHandler(http.server.SimpleHTTPRequestHandler):
                     self.send_json_response(400, {'error': "Missing 'themeId'"})
                     return
 
-                theme_path = os.path.join(SERVER_ROOT, WALLPAPERS_DIR, theme_id)
+                theme_path = handler.get_data_path(WALLPAPERS_DIR, theme_id)
                 if os.path.isdir(theme_path):
                     self.send_json_response(400, {'error': 'Theme already installed.'})
                     return
@@ -771,7 +802,7 @@ class EditorHTTPHandler(http.server.SimpleHTTPRequestHandler):
                     self.send_json_response(400, {'error': 'Invalid zip filename.'})
                     return
 
-                theme_path = os.path.join(SERVER_ROOT, WALLPAPERS_DIR, theme_id)
+                theme_path = handler.get_data_path(WALLPAPERS_DIR, theme_id)
                 if os.path.isdir(theme_path):
                     self.send_json_response(400, {'error': f"Theme '{theme_id}' already exists."})
                     return
@@ -828,7 +859,7 @@ class EditorHTTPHandler(http.server.SimpleHTTPRequestHandler):
                 app_config = read_app_config()
                 app_config['active_theme'] = new_theme_id
 
-                config_path = os.path.join(SERVER_ROOT, APP_CONFIG_FILE)
+                config_path = handler.get_app_config_path()
                 with open(config_path, 'w', encoding='utf-8') as f:
                     json.dump(app_config, f, indent=2)
 
@@ -851,7 +882,7 @@ class EditorHTTPHandler(http.server.SimpleHTTPRequestHandler):
                     self.send_json_response(400, {'error': "Missing 'themeId'"})
                     return
 
-                theme_path = os.path.join(SERVER_ROOT, WALLPAPERS_DIR, theme_id)
+                theme_path = handler.get_data_path(WALLPAPERS_DIR, theme_id)
                 config_path = os.path.join(theme_path, 'config.json')
 
                 if not os.path.isfile(config_path):
@@ -935,7 +966,7 @@ class EditorHTTPHandler(http.server.SimpleHTTPRequestHandler):
                     zip_data = response.read()
 
                 target_folder_name = str(widget_id)
-                widgets_dir = os.path.join(SERVER_ROOT, 'widgets', target_folder_name)
+                widgets_dir = handler.get_data_path(api_config.WIDGETS_DIR, target_folder_name)
                 os.makedirs(widgets_dir, exist_ok=True)
 
                 with zipfile.ZipFile(io.BytesIO(zip_data)) as zf:
@@ -959,7 +990,7 @@ class EditorHTTPHandler(http.server.SimpleHTTPRequestHandler):
                         with zf.open(file_info) as source, open(target_path, 'wb') as target:
                             target.write(source.read())
 
-                index_path = os.path.join(SERVER_ROOT, 'widgets', 'index.json')
+                index_path = handler.get_data_path(api_config.WIDGETS_DIR, 'index.json')
                 
                 registry_data = {"widgets": []}
                 if os.path.isfile(index_path):
@@ -1031,9 +1062,9 @@ class EditorHTTPHandler(http.server.SimpleHTTPRequestHandler):
                      self.send_json_response(400, {'error': "Invalid widget ID"})
                      return
 
-                widget_path = os.path.join(SERVER_ROOT, 'widgets', widget_id)
+                widget_path = handler.get_data_path(api_config.WIDGETS_DIR, widget_id)
                 
-                index_path = os.path.join(SERVER_ROOT, 'widgets', 'index.json')
+                index_path = handler.get_data_path(api_config.WIDGETS_DIR, 'index.json')
                 registry_data = {"widgets": []}
                 if os.path.isfile(index_path):
                     try:
@@ -1079,7 +1110,7 @@ class EditorHTTPHandler(http.server.SimpleHTTPRequestHandler):
                     self.send_json_response(400, {'error': 'Cannot delete the active theme.'})
                     return
 
-                theme_path = os.path.join(SERVER_ROOT, WALLPAPERS_DIR, theme_id)
+                theme_path = handler.get_data_path(WALLPAPERS_DIR, theme_id)
                 if not os.path.isdir(theme_path):
                     self.send_json_response(404, {'error': 'Theme directory not found.'})
                     return
@@ -1119,7 +1150,7 @@ class EditorHTTPHandler(http.server.SimpleHTTPRequestHandler):
                             full_url = f"{origin}{theme_url_path}"
                             filename_hash = hashlib.md5(full_url.encode('utf-8')).hexdigest()
                             
-                            cached_file = os.path.join(SERVER_ROOT, THUMBNAIL_CACHE_DIR, filename_hash + ".jpg")
+                            cached_file = handler.get_data_path(THUMBNAIL_CACHE_DIR, filename_hash + ".jpg")
                             if os.path.exists(cached_file):
                                 try:
                                     os.remove(cached_file)
@@ -1153,7 +1184,7 @@ class EditorHTTPHandler(http.server.SimpleHTTPRequestHandler):
 
         elif self.path == '/clear_thumbnail_cache':
             try:
-                cache_dir = os.path.join(SERVER_ROOT, THUMBNAIL_CACHE_DIR)
+                cache_dir = handler.get_data_path(THUMBNAIL_CACHE_DIR)
                 if os.path.exists(cache_dir):
                     shutil.rmtree(cache_dir)
                     os.makedirs(cache_dir, exist_ok=True)
@@ -1267,7 +1298,7 @@ if __name__ == "__main__":
 
     def cleanup_old_cache():
         try:
-            cache_dir = os.path.join(SERVER_ROOT, THUMBNAIL_CACHE_DIR)
+            cache_dir = handler.get_data_path(THUMBNAIL_CACHE_DIR)
             if not os.path.isdir(cache_dir):
                 return
             
@@ -1313,7 +1344,9 @@ if __name__ == "__main__":
         if not os.path.isfile(html_path):
             print(f"Warning: Editor UI file '{html_file}' not found.")
 
-    wallpapers_path = os.path.join(SERVER_ROOT, WALLPAPERS_DIR)
+    handler.init_appdata(SERVER_ROOT)
+
+    wallpapers_path = handler.get_data_path(WALLPAPERS_DIR)
     if not os.path.isdir(wallpapers_path):
         print(f"Error: Wallpapers directory not found: {wallpapers_path}")
         try:

@@ -1,6 +1,6 @@
 # API Settings
-base_url = "#"
-developer_enabled = True
+base_url = "#"  # Placeholder for the base URL of the API
+developer_enabled = False
 
 # App Version
 CURRENT_APP_VERSION = 2
@@ -8,6 +8,9 @@ CURRENT_APP_VERSION_NAME = "2.0 Beta"
 
 # Directory and File Names
 WALLPAPERS_DIR = 'wallpapers'
+WIDGETS_DIR = 'widgets'
+THUMBNAIL_CACHE_DIR = 'thumbnail_cache'
+BROWSER_DATA_DIR = 'browser_data'
 APP_CONFIG_FILE = 'app_config.json'
 
 # Launcher Settings

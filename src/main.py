@@ -9,6 +9,7 @@ if sys.stdout is None or sys.stderr is None:
     sys.stdout = NullWriter()
     sys.stderr = NullWriter()
 import api_config
+import handler
 import builtins
 
 if not api_config.developer_enabled:
@@ -243,7 +244,7 @@ HTTP_PORT = api_config.ENGINE_HTTP_PORT
 WS_PORT = api_config.ENGINE_WS_PORT
 
 WALLPAPERS_ROOT_DIR = api_config.WALLPAPERS_DIR
-APP_CONFIG_PATH = os.path.join(SCRIPT_DIR, api_config.APP_CONFIG_FILE)
+APP_CONFIG_PATH = handler.get_app_config_path()
 
 STATS_LOCK = threading.Lock()
 CURRENT_STATS = {
@@ -269,7 +270,7 @@ class MyHandler(http.server.SimpleHTTPRequestHandler):
         except Exception as e:
             print(f"Warning: Could not read 'app_config.json'. Falling back to '{default_theme}'. Error: {e}")
             theme_name = default_theme
-        return os.path.join(SCRIPT_DIR, WALLPAPERS_ROOT_DIR, theme_name)
+        return handler.get_data_path(WALLPAPERS_ROOT_DIR, theme_name)
 
     def do_GET(self):
         clean_path = self.path.split('?')[0] 
@@ -485,9 +486,12 @@ class MyHandler(http.server.SimpleHTTPRequestHandler):
                     self.send_error(404, f"ThreeJS file not found: {clean_path}")
                     return
 
-            elif clean_path.startswith('/library/') or clean_path.startswith('/hdr/') or clean_path.startswith('/widgets/'):
+            elif clean_path.startswith('/library/') or clean_path.startswith('/hdr/'):
                 relative_path = clean_path.lstrip('/')
                 file_path = os.path.join(SCRIPT_DIR, relative_path)
+            elif clean_path.startswith('/widgets/'):
+                relative_path = clean_path.lstrip('/')
+                file_path = os.path.join(handler.get_appdata_dir(), relative_path)
             else:
                 relative_path = clean_path.lstrip('/')
                 file_path = os.path.join(current_wallpaper_path, relative_path)
@@ -558,7 +562,7 @@ def create_handler_class(window_ref, app_ref, port_num, token_from_main):
                 
                 if self.path == '/list_templates':
                     try:
-                        templates_file = os.path.join(SCRIPT_DIR, 'widgets', 'templates.json')
+                        templates_file = handler.get_data_path(api_config.WIDGETS_DIR, 'templates.json')
                         templates = []
                         if os.path.exists(templates_file):
                             with open(templates_file, 'r') as f:
@@ -619,7 +623,7 @@ def create_handler_class(window_ref, app_ref, port_num, token_from_main):
                     template_name = data.get('name')
                     if not template_name: raise ValueError("Template name required")
 
-                    templates_file = os.path.join(SCRIPT_DIR, 'widgets', 'templates.json')
+                    templates_file = handler.get_data_path(api_config.WIDGETS_DIR, 'templates.json')
                     if not os.path.exists(os.path.dirname(templates_file)):
                         os.makedirs(os.path.dirname(templates_file))
                     
@@ -658,7 +662,7 @@ def create_handler_class(window_ref, app_ref, port_num, token_from_main):
                     data = json.loads(post_data)
                     template_name = data.get('name')
                     
-                    templates_file = os.path.join(SCRIPT_DIR, 'widgets', 'templates.json')
+                    templates_file = handler.get_data_path(api_config.WIDGETS_DIR, 'templates.json')
                     
                     if not os.path.exists(templates_file):
                         self.send_error(404, "No templates found")
@@ -691,7 +695,7 @@ def create_handler_class(window_ref, app_ref, port_num, token_from_main):
                     data = json.loads(post_data)
                     template_name = data.get('name')
                     
-                    templates_file = os.path.join(SCRIPT_DIR, 'widgets', 'templates.json')
+                    templates_file = handler.get_data_path(api_config.WIDGETS_DIR, 'templates.json')
                     
                     if os.path.exists(templates_file):
                         with open(templates_file, 'r') as f:
@@ -820,7 +824,7 @@ class WallpaperWindow(QMainWindow):
             self.is_video_mode = False
             self.browser = CustomWebEngineView(self)
 
-            storage_path = os.path.join(SCRIPT_DIR, "browser_data")
+            storage_path = handler.get_data_path(api_config.BROWSER_DATA_DIR)
             if not os.path.exists(storage_path):
                 try: os.makedirs(storage_path)
                 except: pass
@@ -1203,6 +1207,9 @@ if __name__ == "__main__":
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
     except: pass
     check_single_instance()
+
+    handler.init_appdata(SCRIPT_DIR)
+
     AUTH_TOKEN = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(50))
     
     if api_config.developer_enabled:
