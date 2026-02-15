@@ -1,7 +1,7 @@
 ![Librewall Banner](./asset/banner.png)
 # Librewall
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-lightgrey)](https://github.com/dkydivyansh/Librewall)
+[![Platform](https://img.shields.io/badge/platform-Windows-lightgrey)](https://github.com/dkydivyansh/Librewall)
 [![Status](https://img.shields.io/badge/status-Active_Development-green)]()
 
 <a href="https://apps.microsoft.com/detail/9mvprwrk1cs6?referrer=appbadge&mode=full" target="_blank"  rel="noopener noreferrer">
