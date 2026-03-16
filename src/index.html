@@ -129,7 +129,7 @@
         async function init() {
 
             try {
-                const response = await fetch('/config', { cache: 'no-store' });
+                const response = await fetch('/config');
                 if (!response.ok) {
                     const errorText = await response.text();
                     throw new Error(`Config not found or invalid: ${response.status} ${response.statusText}. Server said: ${errorText}`);
@@ -214,7 +214,8 @@
             renderer = new THREE.WebGLRenderer({
                 canvas: canvas,
                 antialias: (quality !== 'low'),
-                alpha: true
+                alpha: true,
+                powerPreference: "high-performance"
             });
             renderer.setClearColor(0x000000, 0);
             renderer.setSize(window.innerWidth, window.innerHeight);
@@ -365,7 +366,7 @@
                 } catch (e) { console.error(`Failed to inject Global CSS: ${e}`); }
 
                 try {
-                    const response = await fetch('/library/global.html', { cache: 'no-store' });
+                    const response = await fetch('/library/global.html');
 
                     if (!response.ok) throw new Error(`File not found: /library/global.html`);
                     const html = await response.text();
@@ -404,7 +405,7 @@
 
                 if (config.htmlWidgetFile) {
                     try {
-                        const response = await fetch(config.htmlWidgetFile, { cache: 'no-store' });
+                        const response = await fetch(config.htmlWidgetFile);
                         if (!response.ok) throw new Error(`File not found: ${config.htmlWidgetFile}`);
                         const html = await response.text();
                         const container = document.getElementById('external-widget-root');

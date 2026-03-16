@@ -1166,6 +1166,23 @@
             </div>
         </div>
     </div>
+    
+    <div id="import-preview-overlay" class="lightbox-overlay">
+        <div class="confirm-box" style="max-width: 450px;">
+            <span class="close-icon" id="import-preview-close">&times;</span>
+            <h3>Confirm Installation</h3>
+            <div style="margin: 15px 0; background: var(--bg-color); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color);">
+                <p style="margin: 0 0 10px 0;"><strong>Type:</strong> <span id="preview-type" style="text-transform: capitalize; color: var(--primary-color);"></span></p>
+                <p style="margin: 0 0 10px 0;"><strong>Name:</strong> <span id="preview-name"></span></p>
+                <p style="margin: 0 0 10px 0;"><strong>Author:</strong> <span id="preview-author" style="color: var(--author-color);"></span></p>
+                <p style="margin: 0; font-size: 0.85em; color: var(--secondary-color);"><strong>ID:</strong> <span id="preview-id"></span></p>
+            </div>
+            <div class="confirm-actions">
+                <button class="btn btn-secondary" id="import-preview-cancel">Cancel</button>
+                <button class="btn btn-primary" id="import-preview-confirm">Install</button>
+            </div>
+        </div>
+    </div>
 
     <script>
 
@@ -1579,17 +1596,61 @@
             document.getElementById('import-file-input').click();
 
         };
+        let pendingImportFormData = null;
+
         document.getElementById('import-file-input').onchange = async (e) => {
             if (!e.target.files[0]) return;
             const btn = document.getElementById('import-btn');
-            const txt = btn.textContent; btn.disabled = true; btn.textContent = "Importing...";
-            const fd = new FormData(); fd.append('themeFile', e.target.files[0]);
+            const file = e.target.files[0];
+            const txt = btn.textContent; 
+            btn.disabled = true; 
+            btn.textContent = "Scanning...";
+            
+            const fd = new FormData(); 
+            fd.append('themeFile', file);
+            
             try {
-                const r = await fetch('/import_theme', { method: 'POST', body: fd });
+                const r = await fetch('/preview_import', { method: 'POST', body: fd });
                 if (!r.ok) throw new Error((await r.json()).error);
-                showAlert('Success', 'Theme Imported'); loadWallpapers();
-            } catch (err) { showAlert('Error', err.message); }
+                const data = await r.json();
+                
+                document.getElementById('preview-type').textContent = data.type;
+                document.getElementById('preview-name').textContent = data.name;
+                document.getElementById('preview-author').textContent = data.author;
+                document.getElementById('preview-id').textContent = data.id;
+                
+                pendingImportFormData = fd;
+                document.getElementById('import-preview-overlay').style.display = 'flex';
+                
+            } catch (err) { showAlert('Error Reading Zip', err.message); }
             finally { btn.disabled = false; btn.textContent = txt; e.target.value = null; }
+        };
+
+        document.getElementById('import-preview-close').onclick = () => document.getElementById('import-preview-overlay').style.display = 'none';
+        document.getElementById('import-preview-cancel').onclick = () => document.getElementById('import-preview-overlay').style.display = 'none';
+        
+        document.getElementById('import-preview-confirm').onclick = async () => {
+            if (!pendingImportFormData) return;
+            document.getElementById('import-preview-overlay').style.display = 'none';
+            const btn = document.getElementById('import-btn');
+            const txt = btn.textContent; 
+            btn.disabled = true; 
+            btn.textContent = "Installing...";
+            
+            try {
+                const r = await fetch('/import_theme', { method: 'POST', body: pendingImportFormData });
+                if (!r.ok) throw new Error((await r.json()).error);
+                const data = await r.json();
+                
+                if (data.type === 'widget') {
+                    showAlert('Success', 'Widget Installed Successfully!');
+                    setTimeout(() => openManageWidgets(), 500);
+                } else {
+                    showAlert('Success', 'Theme Installed Successfully'); 
+                    loadWallpapers();
+                }
+            } catch (err) { showAlert('Installation Error', err.message); }
+            finally { btn.disabled = false; btn.textContent = txt; pendingImportFormData = null; }
         };
 
         document.getElementById('lightbox-close').onclick = () => hideLightbox(false);
