@@ -881,17 +881,19 @@ class EditorHTTPHandler(http.server.SimpleHTTPRequestHandler):
                             with zf.open(main_js_path) as source:
                                 js_content = source.read().decode('utf-8', errors='ignore')
                                 import re
-                                name_match = re.search(r'name:\s*[\'"]([^\'"]+)[\'"]', js_content)
-                                author_match = re.search(r'author:\s*[\'"]([^\'"]+)[\'"]', js_content)
-                                if name_match: asset_name = name_match.group(1)
-                                if author_match: asset_author = author_match.group(1)
+                                name_match = re.search(r'@name:\s*([^\n\r]+)', js_content)
+                                if not name_match: name_match = re.search(r'name:\s*[\'"]([^\'"]+)[\'"]', js_content)
+                                author_match = re.search(r'@author:\s*([^\n\r]+)', js_content)
+                                if not author_match: author_match = re.search(r'author:\s*[\'"]([^\'"]+)[\'"]', js_content)
+                                desc_match = re.search(r'@description:\s*([^\n\r]+)', js_content)
+                                minv_match = re.search(r'@min_version:\s*([^\n\r]+)', js_content)
+
+                                if name_match: asset_name = name_match.group(1).strip()
+                                if author_match: asset_author = author_match.group(1).strip()
                         except Exception as e: 
                             print(f"Error reading widget metadata: {e}")
                             
                         try:
-                            import urllib.request
-                            import json
-                            import api_config
                             api_url = f"{api_config.API_BASE_URL}?action=get_widgets&query={theme_id}"
                             with urllib.request.urlopen(api_url, timeout=5) as response:
                                 api_resp = json.loads(response.read().decode('utf-8'))
@@ -1012,19 +1014,27 @@ class EditorHTTPHandler(http.server.SimpleHTTPRequestHandler):
                         main_js_path = os.path.join(widgets_dir, 'main.js')
                         widget_name = f"Widget {theme_id}"
                         widget_author = "Local Import"
+                        widget_desc = "No description provided."
+                        widget_min_version = 1
                         try:
                             with open(main_js_path, 'r', encoding='utf-8') as f:
                                 js_content = f.read()
-                                name_match = re.search(r'name:\s*[\'"]([^\'"]+)[\'"]', js_content)
-                                author_match = re.search(r'author:\s*[\'"]([^\'"]+)[\'"]', js_content)
-                                if name_match: widget_name = name_match.group(1)
-                                if author_match: widget_author = author_match.group(1)
+                                name_match = re.search(r'@name:\s*([^\n\r]+)', js_content)
+                                if not name_match: name_match = re.search(r'name:\s*[\'"]([^\'"]+)[\'"]', js_content)
+                                author_match = re.search(r'@author:\s*([^\n\r]+)', js_content)
+                                if not author_match: author_match = re.search(r'author:\s*[\'"]([^\'"]+)[\'"]', js_content)
+                                desc_match = re.search(r'@description:\s*([^\n\r]+)', js_content)
+                                minv_match = re.search(r'@min_version:\s*([^\n\r]+)', js_content)
+
+                                if name_match: widget_name = name_match.group(1).strip()
+                                if author_match: widget_author = author_match.group(1).strip()
+                                if desc_match: widget_desc = desc_match.group(1).strip()
+                                if minv_match: 
+                                    try: widget_min_version = int(minv_match.group(1).strip())
+                                    except: pass
                         except: pass
                         
                         try:
-                            import urllib.request
-                            import json
-                            import api_config
                             api_url = f"{api_config.API_BASE_URL}?action=get_widgets&query={theme_id}"
                             with urllib.request.urlopen(api_url, timeout=5) as response:
                                 api_resp = json.loads(response.read().decode('utf-8'))
@@ -1048,7 +1058,13 @@ class EditorHTTPHandler(http.server.SimpleHTTPRequestHandler):
                             except: pass
                         
                         existing_entry = next((w for w in registry_data.get('widgets', []) if str(w.get('id')) == str(theme_id)), None)
-                        new_entry = { "id": str(theme_id), "name": widget_name, "author": widget_author }
+                        new_entry = { 
+                            "id": str(theme_id), 
+                            "name": widget_name, 
+                            "author": widget_author,
+                            "description": widget_desc,
+                            "min_version": widget_min_version
+                        }
                         if existing_entry: existing_entry.update(new_entry)
                         else: 
                             if 'widgets' not in registry_data: registry_data['widgets'] = []

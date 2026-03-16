@@ -1,3 +1,10 @@
+/*
+@name: Live Clock
+@author: Dkydivyansh
+@description: A minimal and customizable live clock for your desktop.
+@min_version: 1
+*/
+
 (function () {
     const script = document.currentScript;
     const WIDGET_ID = script.dataset.widgetId;
