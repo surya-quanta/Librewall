@@ -525,6 +525,8 @@ class MyHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_header('Content-type', mime_type)
                 if clean_path in ['/', '/config', '/app_config.json', '/widget.json']: 
                     self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+                else:
+                    self.send_header('Cache-Control', 'public, max-age=604800')
                 
                 f.seek(0, os.SEEK_END)
                 file_size = f.tell()
