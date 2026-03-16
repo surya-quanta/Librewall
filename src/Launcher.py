@@ -808,6 +808,129 @@ class EditorHTTPHandler(http.server.SimpleHTTPRequestHandler):
 
             except Exception as e:
                 print(f"Error installing theme: {e}")
+
+        elif self.path == '/preview_import':
+            try:
+                content_type = self.headers.get('Content-Type')
+                if not content_type:
+                    self.send_json_response(400, {'error': "Missing Content-Type"})
+                    return
+
+                content_len = int(self.headers.get('Content-Length', 0))
+                body = self.rfile.read(content_len)
+
+                msg = email.message_from_bytes(
+                    f'Content-Type: {content_type}\r\n\r\n'.encode() + body
+                )
+
+                file_item_name = None
+                file_item_data = None
+                
+                if msg.is_multipart():
+                    for part in msg.get_payload():
+                         if part.get_param('name', header='Content-Disposition') == 'themeFile':
+                             file_item_name = part.get_filename()
+                             file_item_data = part.get_payload(decode=True)
+                             break
+                
+                if not file_item_data:
+                     self.send_json_response(400, {'error': "Missing 'themeFile' in form data or empty file"})
+                     return
+
+                if not file_item_name:
+                    self.send_json_response(400, {'error': 'No filename provided.'})
+                    return
+                
+                if not file_item_name.endswith('.zip'):
+                     self.send_json_response(400, {'error': 'File must be a .zip archive.'})
+                     return
+
+                safe_basename = os.path.basename(file_item_name)
+                theme_id = os.path.splitext(safe_basename)[0]
+
+                if not theme_id:
+                    self.send_json_response(400, {'error': 'Invalid zip filename.'})
+                    return
+
+                zip_data = file_item_data
+
+                asset_type = 'wallpaper'
+                asset_name = f"Theme {theme_id}"
+                asset_author = "Unknown"
+
+                with zipfile.ZipFile(io.BytesIO(zip_data)) as zf:
+                    root_folder = ""
+                    if len(zf.namelist()) > 0:
+                         root_folder_parts = zf.namelist()[0].split('/')
+                         if len(root_folder_parts) > 1 and zf.namelist()[0].endswith('/'):
+                             root_folder = zf.namelist()[0]
+                         elif len(root_folder_parts) > 1:
+                             root_folder = root_folder_parts[0] + '/'
+
+                    is_widget = False
+                    for file_info in zf.infolist():
+                        if file_info.filename == root_folder + 'main.js' or file_info.filename == 'main.js':
+                            is_widget = True
+                            break
+                    
+                    if is_widget:
+                        asset_type = 'widget'
+                        asset_name = f"Widget {theme_id}"
+                        try:
+                            main_js_path = root_folder + 'main.js' if root_folder + 'main.js' in zf.namelist() else 'main.js'
+                            with zf.open(main_js_path) as source:
+                                js_content = source.read().decode('utf-8', errors='ignore')
+                                import re
+                                name_match = re.search(r'@name:\s*([^\n\r]+)', js_content)
+                                if not name_match: name_match = re.search(r'name:\s*[\'"]([^\'"]+)[\'"]', js_content)
+                                author_match = re.search(r'@author:\s*([^\n\r]+)', js_content)
+                                if not author_match: author_match = re.search(r'author:\s*[\'"]([^\'"]+)[\'"]', js_content)
+                                desc_match = re.search(r'@description:\s*([^\n\r]+)', js_content)
+                                minv_match = re.search(r'@min_version:\s*([^\n\r]+)', js_content)
+
+                                if name_match: asset_name = name_match.group(1).strip()
+                                if author_match: asset_author = author_match.group(1).strip()
+                        except Exception as e: 
+                            print(f"Error reading widget metadata: {e}")
+                            
+                        try:
+                            api_url = f"{api_config.API_BASE_URL}?action=get_widgets&query={theme_id}"
+                            with urllib.request.urlopen(api_url, timeout=5) as response:
+                                api_resp = json.loads(response.read().decode('utf-8'))
+                                if api_resp.get('data'):
+                                    for w in api_resp['data']:
+                                        if str(w.get('id')) == theme_id:
+                                            if w.get('name') or w.get('widgetName'): 
+                                                asset_name = w.get('widgetName', w.get('name'))
+                                            if w.get('author'): 
+                                                asset_author = w.get('author')
+                                            break
+                        except Exception as e:
+                            pass
+                    else:
+                        asset_type = 'wallpaper'
+                        asset_name = theme_id
+                        try:
+                            config_path = root_folder + 'config.json' if root_folder + 'config.json' in zf.namelist() else 'config.json'
+                            if config_path in zf.namelist():
+                                with zf.open(config_path) as source:
+                                    config_json = json.loads(source.read().decode('utf-8', errors='ignore'))
+                                    metadata = config_json.get('metadata', {})
+                                    asset_name = metadata.get('themeName', config_json.get('themeName', theme_id))
+                                    asset_author = metadata.get('author', config_json.get('author', 'Unknown'))
+                        except Exception as e:
+                            print(f"Error reading wallpaper metadata: {e}")
+
+                self.send_json_response(200, {
+                    'status': 'success',
+                    'type': asset_type,
+                    'name': asset_name,
+                    'author': asset_author,
+                    'id': theme_id
+                })
+
+            except Exception as e:
+                print(f"Error previewing theme: {e}")
                 self.send_json_response(500, {'error': str(e)})
             return
 
@@ -854,43 +977,130 @@ class EditorHTTPHandler(http.server.SimpleHTTPRequestHandler):
                     self.send_json_response(400, {'error': 'Invalid zip filename.'})
                     return
 
-                theme_path = handler.get_data_path(WALLPAPERS_DIR, theme_id)
-                if os.path.isdir(theme_path):
-                    self.send_json_response(400, {'error': f"Theme '{theme_id}' already exists."})
-                    return
-
-                print(f"Importing theme from '{safe_basename}' to '{theme_id}'...")
-
                 zip_data = file_item_data
 
                 with zipfile.ZipFile(io.BytesIO(zip_data)) as zf:
                     root_folder = ""
                     if len(zf.namelist()) > 0:
                          root_folder_parts = zf.namelist()[0].split('/')
-                         if len(root_folder_parts) > 1:
+                         if len(root_folder_parts) > 1 and zf.namelist()[0].endswith('/'):
+                             root_folder = zf.namelist()[0]
+                         elif len(root_folder_parts) > 1:
                              root_folder = root_folder_parts[0] + '/'
 
-                    os.makedirs(theme_path, exist_ok=True)
-
+                    is_widget = False
                     for file_info in zf.infolist():
-                        if file_info.is_dir():
-                            continue
+                        if file_info.filename == root_folder + 'main.js' or file_info.filename == 'main.js':
+                            is_widget = True
+                            break
+                    
+                    if is_widget:
+                        widgets_dir = handler.get_data_path(api_config.WIDGETS_DIR, theme_id)
+                        os.makedirs(widgets_dir, exist_ok=True)
 
-                        relative_path = file_info.filename
-                        if relative_path.startswith(root_folder):
-                             relative_path = relative_path[len(root_folder):]
+                        for file_info in zf.infolist():
+                            if file_info.is_dir(): continue
+                            relative_path = file_info.filename
+                            if root_folder and relative_path.startswith(root_folder):
+                                 relative_path = relative_path[len(root_folder):]
+                            if not relative_path: continue
+                            
+                            target_path = os.path.join(widgets_dir, relative_path)
+                            os.makedirs(os.path.dirname(target_path), exist_ok=True)
+                            with zf.open(file_info) as source, open(target_path, 'wb') as target:
+                                target.write(source.read())
 
-                        if not relative_path:
-                            continue
+                        import re
+                        main_js_path = os.path.join(widgets_dir, 'main.js')
+                        widget_name = f"Widget {theme_id}"
+                        widget_author = "Local Import"
+                        widget_desc = "No description provided."
+                        widget_min_version = 1
+                        try:
+                            with open(main_js_path, 'r', encoding='utf-8') as f:
+                                js_content = f.read()
+                                name_match = re.search(r'@name:\s*([^\n\r]+)', js_content)
+                                if not name_match: name_match = re.search(r'name:\s*[\'"]([^\'"]+)[\'"]', js_content)
+                                author_match = re.search(r'@author:\s*([^\n\r]+)', js_content)
+                                if not author_match: author_match = re.search(r'author:\s*[\'"]([^\'"]+)[\'"]', js_content)
+                                desc_match = re.search(r'@description:\s*([^\n\r]+)', js_content)
+                                minv_match = re.search(r'@min_version:\s*([^\n\r]+)', js_content)
 
-                        target_path = os.path.join(theme_path, relative_path)
-                        os.makedirs(os.path.dirname(target_path), exist_ok=True)
+                                if name_match: widget_name = name_match.group(1).strip()
+                                if author_match: widget_author = author_match.group(1).strip()
+                                if desc_match: widget_desc = desc_match.group(1).strip()
+                                if minv_match: 
+                                    try: widget_min_version = int(minv_match.group(1).strip())
+                                    except: pass
+                        except: pass
+                        
+                        try:
+                            api_url = f"{api_config.API_BASE_URL}?action=get_widgets&query={theme_id}"
+                            with urllib.request.urlopen(api_url, timeout=5) as response:
+                                api_resp = json.loads(response.read().decode('utf-8'))
+                                if api_resp.get('data'):
+                                    for w in api_resp['data']:
+                                        if str(w.get('id')) == theme_id:
+                                            if w.get('name') or w.get('widgetName'):
+                                                widget_name = w.get('widgetName', w.get('name'))
+                                            if w.get('author'):
+                                                widget_author = w.get('author')
+                                            break
+                        except Exception as e:
+                            pass
 
-                        with zf.open(file_info) as source, open(target_path, 'wb') as target:
-                            target.write(source.read())
+                        index_path = handler.get_data_path(api_config.WIDGETS_DIR, 'index.json')
+                        registry_data = {"widgets": []}
+                        if os.path.isfile(index_path):
+                            try:
+                                with open(index_path, 'r', encoding='utf-8') as f:
+                                    registry_data = json.load(f)
+                            except: pass
+                        
+                        existing_entry = next((w for w in registry_data.get('widgets', []) if str(w.get('id')) == str(theme_id)), None)
+                        new_entry = { 
+                            "id": str(theme_id), 
+                            "name": widget_name, 
+                            "author": widget_author,
+                            "description": widget_desc,
+                            "min_version": widget_min_version
+                        }
+                        if existing_entry: existing_entry.update(new_entry)
+                        else: 
+                            if 'widgets' not in registry_data: registry_data['widgets'] = []
+                            registry_data['widgets'].append(new_entry)
+                            
+                        with open(index_path, 'w', encoding='utf-8') as f:
+                            json.dump(registry_data, f, indent=4)
 
-                print(f"Successfully imported theme: {theme_id}")
-                self.send_json_response(200, {'status': 'success', 'themeId': theme_id})
+                        print(f"Successfully imported widget: {theme_id}")
+                        self.send_json_response(200, {'status': 'success', 'type': 'widget', 'installed': theme_id})
+                    else:
+                        theme_path = handler.get_data_path(WALLPAPERS_DIR, theme_id)
+                        if os.path.isdir(theme_path):
+                            self.send_json_response(400, {'error': f"Theme '{theme_id}' already exists."})
+                            return
+
+                        print(f"Importing theme from '{safe_basename}' to '{theme_id}'...")
+                        os.makedirs(theme_path, exist_ok=True)
+
+                        for file_info in zf.infolist():
+                            if file_info.is_dir(): continue
+
+                            relative_path = file_info.filename
+                            if root_folder and relative_path.startswith(root_folder):
+                                 relative_path = relative_path[len(root_folder):]
+
+                            if not relative_path: continue
+
+                            target_path = os.path.join(theme_path, relative_path)
+                            os.makedirs(os.path.dirname(target_path), exist_ok=True)
+
+                            with zf.open(file_info) as source, open(target_path, 'wb') as target:
+                                target.write(source.read())
+
+                        print(f"Successfully imported theme: {theme_id}")
+                        self.send_json_response(200, {'status': 'success', 'type': 'wallpaper', 'themeId': theme_id})
 
             except Exception as e:
                 print(f"Error importing theme: {e}")

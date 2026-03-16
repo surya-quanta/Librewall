@@ -1,3 +1,9 @@
+/*
+@name: Traffic Data
+@author: Dkydivyansh
+@description: Displays real-time network traffic data and usage statistics.
+@min_version: 1
+*/
 
 (function () {
     const script = document.currentScript;
