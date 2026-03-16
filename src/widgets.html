@@ -143,6 +143,8 @@
             transition: all 0.2s ease-in-out;
             cursor: pointer;
             position: relative;
+            will-change: transform, box-shadow;
+            transform: translateZ(0);
         }
 
         .wallpaper-card:hover {
@@ -272,6 +274,7 @@
             max-height: 90vh;
             position: relative;
             animation: fadeIn 0.3s ease;
+            will-change: transform, opacity;
         }
 
         @keyframes fadeIn {
@@ -412,6 +415,7 @@
             border-top: 5px solid var(--primary-color);
             border-radius: 50%;
             animation: spin 1s linear infinite;
+            will-change: transform;
         }
 
         @keyframes spin {

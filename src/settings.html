@@ -170,25 +170,26 @@
             font-weight: 600;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
             cursor: pointer;
-            transform: translateY(100px);
             opacity: 0;
             transition: all 0.3s ease;
+            will-change: transform, opacity;
+            transform: translateY(100px) translateZ(0);
         }
 
         #save-btn.visible {
-            transform: translateY(0);
+            transform: translateY(0) translateZ(0);
             opacity: 1;
         }
 
         #save-btn:hover {
             background-color: var(--success-hover);
-            transform: translateY(-2px);
+            transform: translateY(-2px) translateZ(0);
         }
 
         #save-btn:disabled {
             background-color: #555;
             cursor: not-allowed;
-            transform: translateY(0);
+            transform: translateY(0) translateZ(0);
         }
 
         .contributors-grid {
@@ -210,12 +211,14 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+            will-change: transform, box-shadow, border-color;
+            transform: translateZ(0);
         }
 
         .contributor-card:hover {
-            transform: translateY(-4px);
             border-color: var(--primary-color);
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            transform: translateY(-4px) translateZ(0);
         }
 
         .contributor-avatar {
@@ -283,6 +286,13 @@
                     <p style="font-size: 0.8rem; color: #aaa; margin: 4px 0 0 0;">Clear generated static thumbnails.</p>
                 </div>
                 <button id="clear-cache-btn" class="btn" style="background-color: #555;">Clear Cache</button>
+            </div>
+            <div class="setting-row">
+                <div>
+                    <span class="setting-label">App Data Folder</span>
+                    <p style="font-size: 0.8rem; color: var(--author-color); margin: 4px 0 0 0;">Open the directory where wallpapers and widgets are saved.</p>
+                </div>
+                <button id="open-appdata-btn" class="btn btn-primary">Open Folder</button>
             </div>
         </div>
 
@@ -440,6 +450,35 @@
                     clearCacheBtn.disabled = false;
                     clearCacheBtn.textContent = originalText;
                     clearCacheBtn.style.backgroundColor = "#555";
+                }, 2000);
+            }
+        });
+
+        const openAppdataBtn = document.getElementById('open-appdata-btn');
+        openAppdataBtn.addEventListener('click', async () => {
+            const originalText = openAppdataBtn.textContent;
+            openAppdataBtn.disabled = true;
+            openAppdataBtn.textContent = "Opening...";
+
+            try {
+                const r = await fetch('/open_app_data_folder', { method: 'POST' });
+                if (!r.ok) throw new Error('Failed');
+
+                openAppdataBtn.textContent = "Opened!";
+                openAppdataBtn.style.backgroundColor = "var(--success-color)";
+                setTimeout(() => {
+                    openAppdataBtn.disabled = false;
+                    openAppdataBtn.textContent = originalText;
+                    openAppdataBtn.style.backgroundColor = "var(--primary-color)";
+                }, 2000);
+            } catch (e) {
+                console.error(e);
+                openAppdataBtn.textContent = "Error";
+                openAppdataBtn.style.backgroundColor = "var(--danger-color)";
+                setTimeout(() => {
+                    openAppdataBtn.disabled = false;
+                    openAppdataBtn.textContent = originalText;
+                    openAppdataBtn.style.backgroundColor = "var(--primary-color)";
                 }, 2000);
             }
         });

@@ -188,6 +188,8 @@
             position: relative;
             content-visibility: auto;
             contain-intrinsic-size: 100px 200px;
+            will-change: transform, box-shadow;
+            transform: translateZ(0);
         }
 
         .wallpaper-card:hover {
@@ -352,6 +354,7 @@
             max-height: 90vh;
             position: relative;
             animation: fadeIn 0.3s ease;
+            will-change: transform, opacity;
         }
 
         @keyframes fadeIn {
@@ -482,6 +485,7 @@
             border-top: 5px solid var(--primary-color);
             border-radius: 50%;
             animation: spin 1s linear infinite;
+            will-change: transform;
         }
 
         @keyframes spin {
@@ -628,11 +632,25 @@
             position: relative;
             z-index: 1;
             border-color: rgba(255, 255, 255, 0.4) !important;
+            transform: translateZ(0);
+        }
+
+        .featured-glow::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border-radius: inherit;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.1), 0 0 5px rgba(255, 255, 255, 0.1) inset;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            pointer-events: none;
+            will-change: opacity;
             animation: organic-glow 3s ease-in-out infinite;
         }
 
         .featured-glow:hover {
-            animation: none;
             border-color: #ffffff !important;
             box-shadow: 0 10px 30px rgba(255, 255, 255, 0.3),
                 0 0 0 1px rgba(255, 255, 255, 0.5) !important;
@@ -640,23 +658,23 @@
             z-index: 10;
         }
 
+        .featured-glow:hover::after {
+            display: none;
+            animation: none;
+        }
+
         @keyframes organic-glow {
             0% {
-                box-shadow: 0 0 15px rgba(255, 255, 255, 0.1),
-                    0 0 5px rgba(255, 255, 255, 0.1) inset;
-                border-color: rgba(255, 255, 255, 0.3);
+                opacity: 0.5;
             }
 
             50% {
-                box-shadow: 0 0 25px rgba(255, 255, 255, 0.25),
-                    0 0 10px rgba(255, 255, 255, 0.15) inset;
-                border-color: rgba(255, 255, 255, 0.6);
+                opacity: 1;
+                box-shadow: 0 0 25px rgba(255, 255, 255, 0.25), 0 0 10px rgba(255, 255, 255, 0.15) inset;
             }
 
             100% {
-                box-shadow: 0 0 15px rgba(255, 255, 255, 0.1),
-                    0 0 5px rgba(255, 255, 255, 0.1) inset;
-                border-color: rgba(255, 255, 255, 0.3);
+                opacity: 0.5;
             }
         }
 
@@ -677,13 +695,15 @@
             transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
             backdrop-filter: blur(5px);
             white-space: nowrap;
+            will-change: transform, background-color, color, border-color;
+            transform: translateZ(0);
         }
 
         .filter-chip:hover {
             border-color: rgba(255, 255, 255, 0.3);
             color: var(--text-color);
             background: rgba(60, 60, 60, 0.8);
-            transform: translateY(-1px);
+            transform: translateY(-1px) translateZ(0);
         }
 
         .filter-chip.active {
@@ -691,7 +711,7 @@
             border-color: var(--primary-color);
             color: white;
             box-shadow: 0 4px 12px rgba(13, 110, 253, 0.4);
-            transform: translateY(-1px);
+            transform: translateY(-1px) translateZ(0);
         }
 
         .notification-toast {

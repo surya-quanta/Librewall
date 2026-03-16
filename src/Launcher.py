@@ -1474,6 +1474,21 @@ class EditorHTTPHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_json_response(500, {'error': str(e)})
             return
 
+        elif self.path == '/open_app_data_folder':
+            try:
+                target_dir = handler.get_appdata_dir()
+                if os.path.exists(target_dir):
+                    if hasattr(os, 'startfile'):
+                        os.startfile(target_dir)
+                    else:
+                        subprocess.Popen(['explorer', target_dir])
+                    self.send_json_response(200, {'status': 'success'})
+                else:
+                    self.send_json_response(404, {'error': 'Directory not found'})
+            except Exception as e:
+                print(f"Error opening AppData folder: {e}")
+                self.send_json_response(500, {'error': str(e)})
+            return
 
 
         self.send_json_response(404, {'error': "Not Found"})
