@@ -39,6 +39,7 @@ from port_map import PORT_PROTOCOL_MAP
 import subprocess
 import zlib 
 import base64
+import shutil
 try:
     from frontend import engine_assets
     HAS_EMBEDDED_ASSETS = True
@@ -118,13 +119,19 @@ def get_reliable_windows_id():
             'powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-Command',
             "(Get-CimInstance -Class Win32_ComputerSystemProduct).UUID"
         ]
-        uuid = subprocess.run(
-            uuid_cmd, 
-            capture_output=True, 
-            text=True, 
-            startupinfo=startupinfo,
-            creationflags=subprocess.CREATE_NO_WINDOW
-        ).stdout.strip()
+        
+        try:
+            uuid = subprocess.run(
+                uuid_cmd, 
+                capture_output=True, 
+                text=True, 
+                startupinfo=startupinfo,
+                creationflags=subprocess.CREATE_NO_WINDOW,
+                timeout=3  # Added to prevent WMI infinite hangs
+            ).stdout.strip()
+        except subprocess.TimeoutExpired:
+            print("Warning: WMI UUID lookup timed out, returning fallback ID.")
+            return "unknown-device-id"
 
         if not uuid:
             print("Warning: UUID empty, returning fallback ID.")
@@ -221,7 +228,7 @@ def is_window_fullscreen(hwnd):
 
 mutex_handle = None  
 
-def check_single_instance(mutex_name=r"Global\librewall_engine"):
+def check_single_instance(mutex_name=r"Local\librewall_engine"):
     global mutex_handle
     mutex_handle = kernel32.CreateMutexW(None, False, mutex_name)
     if kernel32.GetLastError() == 183:
@@ -518,8 +525,13 @@ class MyHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_header('Content-type', mime_type)
                 if clean_path in ['/', '/config', '/app_config.json', '/widget.json']: 
                     self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+                
+                f.seek(0, os.SEEK_END)
+                file_size = f.tell()
+                f.seek(0)
+                self.send_header('Content-Length', str(file_size))
                 self.end_headers()
-                self.wfile.write(f.read())
+                shutil.copyfileobj(f, self.wfile)
         except FileNotFoundError:
             self.send_error(404, f"File not found: {file_path}")
         except Exception as e:

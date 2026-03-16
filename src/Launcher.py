@@ -174,7 +174,7 @@ def bring_existing_instance_to_front(window_title="librewall") -> bool:
 
 mutex_handle = None  
 
-def check_single_instance(mutex_name=r"Global\librewall", window_title="librewall"):
+def check_single_instance(mutex_name=r"Local\librewall", window_title="librewall"):
     global mutex_handle
 
     mutex_handle = kernel32.CreateMutexW(None, False, mutex_name)
