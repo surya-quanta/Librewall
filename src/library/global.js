@@ -273,14 +273,16 @@ const WidgetLoader = {
             this.networkEnabled = true;
         }
 
-        for (const widgetInfo of this.registry) {
+        const validWidgets = this.registry.filter(w => w.status !== 'missing');
+
+        await Promise.all(validWidgets.map(async (widgetInfo) => {
             const content = await this.loadWidget(widgetInfo);
             if (content) {
                 this.renderWidget(widgetInfo.id, content, wrapper);
             }
-        }
+        }));
 
-        this.registry = this.registry.filter(w => w.status !== 'missing');
+        this.registry = validWidgets.filter(w => w.status !== 'missing');
 
         if (this.networkEnabled) {
             await this.restorePositions();
@@ -571,16 +573,7 @@ const WidgetLoader = {
             console.error('Error saving positions:', e);
         }
     },
-
     async restorePositions() {
-        const defaultPositions = {
-            "live-clock": { "top": "72px", "left": "1709px", "right": "auto", "width": "778px", "height": "181px" },
-            "traffic-data": { "top": "1072px", "left": "31px", "right": "auto", "width": "432px", "height": "252px" },
-            "listening-ports": { "top": "36px", "left": "36px", "right": "auto", "width": "425px", "height": "995px" },
-            "live-traffic-log": { "top": "891px", "left": "1809px", "right": "auto", "width": "683px", "height": "477px" },
-            "active-connections": { "top": "299px", "left": "1813px", "right": "auto", "width": "675px", "height": "572px" }
-        };
-
         try {
             const response = await fetch('/widget.json');
             if (response.ok) {
@@ -608,10 +601,21 @@ const WidgetLoader = {
             }
         } catch (e) { }
 
-        Object.keys(defaultPositions).forEach(id => {
+        const ww = window.innerWidth;
+        const wh = window.innerHeight;
+
+        const dynPositions = {
+            "live-clock": { "top": "72px", "left": `${Math.max(10, ww - 800)}px`, "right": "auto", "width": "778px", "height": "181px" },
+            "traffic-data": { "top": `${Math.max(10, wh - 270)}px`, "left": "31px", "right": "auto", "width": "432px", "height": "252px" },
+            "listening-ports": { "top": "36px", "left": "36px", "right": "auto", "width": "425px", "height": `${Math.min(995, wh - 100)}px` },
+            "live-traffic-log": { "top": `${Math.max(10, wh - 500)}px`, "left": `${Math.max(10, ww - 700)}px`, "right": "auto", "width": "683px", "height": "477px" },
+            "active-connections": { "top": "299px", "left": `${Math.max(10, ww - 700)}px`, "right": "auto", "width": "675px", "height": "572px" }
+        };
+
+        Object.keys(dynPositions).forEach(id => {
             const el = document.getElementById(id);
             if (el) {
-                const pos = defaultPositions[id];
+                const pos = dynPositions[id];
                 el.style.top = pos.top;
                 el.style.left = pos.left;
                 el.style.right = pos.right;
