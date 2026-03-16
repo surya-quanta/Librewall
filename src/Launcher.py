@@ -253,52 +253,99 @@ def read_app_config():
         print(f"Error reading {APP_CONFIG_FILE}: {e}. Using defaults.")
         return defaults
 
-def update_startup_shortcut(enable: bool):
-    if not HAS_WIN32COM:
-        return False, "win32com library not installed."
+def _get_package_family_name():
+    """Extract the PackageFamilyName for Store/MSIX apps."""
+    try:
+        parts = SERVER_ROOT.replace('/', '\\').split('\\')
+        for part in parts:
+            if part.startswith('dkydivyansh.Librewall_') and '__' in part:
+                name_and_rest = part.split('__')
+                if len(name_and_rest) == 2:
+                    publisher_hash = name_and_rest[1]
+                    package_name = name_and_rest[0].rsplit('_', 2)[0]
+                    pfn = f"{package_name}_{publisher_hash}"
+                    print(f"Extracted PackageFamilyName from path: {pfn}")
+                    return pfn
+    except Exception as e:
+        print(f"Could not extract PFN from path: {e}")
 
     try:
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        startupinfo.wShowWindow = 0  # SW_HIDE
+        result = subprocess.run(
+            ['powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-Command',
+             "(Get-AppxPackage -Name 'dkydivyansh.Librewall').PackageFamilyName"],
+            capture_output=True, text=True, startupinfo=startupinfo,
+            creationflags=subprocess.CREATE_NO_WINDOW
+        )
+        pfn = result.stdout.strip()
+        if pfn:
+            print(f"Got PackageFamilyName from PowerShell: {pfn}")
+            return pfn
+    except Exception as e:
+        print(f"PowerShell PFN lookup failed: {e}")
 
-        shell = win32com.client.Dispatch("WScript.Shell")
-        startup_folder = shell.SpecialFolders("Startup")
-        shortcut_path = os.path.join(startup_folder, "LibrewallEngine.lnk") 
+    return None
+
+def _cleanup_old_startup_shortcut():
+    try:
+        if HAS_WIN32COM:
+            shell = win32com.client.Dispatch("WScript.Shell")
+            startup_folder = shell.SpecialFolders("Startup")
+        else:
+            startup_folder = os.path.join(os.environ.get('APPDATA', ''), 
+                                          r'Microsoft\Windows\Start Menu\Programs\Startup')
+        
+        shortcut_path = os.path.join(startup_folder, "LibrewallEngine.lnk")
+        if os.path.exists(shortcut_path):
+            os.remove(shortcut_path)
+            print(f"Cleaned up old startup shortcut: {shortcut_path}")
+    except Exception as e:
+        print(f"Could not clean up old shortcut: {e}")
+
+def update_startup_shortcut(enable: bool):
+    import winreg
+
+    REG_KEY_PATH = r"Software\Microsoft\Windows\CurrentVersion\Run"
+    REG_VALUE_NAME = "LibrewallEngine"
+
+    try:
+        is_store_app = "WindowsApps" in SERVER_ROOT
 
         if enable:
-
-            engine_exe_path = os.path.join(SERVER_ROOT, 'engine.exe')
-
-            if os.path.isfile(engine_exe_path):
-                target = engine_exe_path
-                args = ""
-                cwd = SERVER_ROOT
-                print(f"Creating shortcut for Engine: {engine_exe_path}")
+            if is_store_app:
+                package_family_name = _get_package_family_name()
+                if not package_family_name:
+                    return False, "Could not determine package family name for Store app."
+                command = f'explorer.exe shell:AppsFolder\\{package_family_name}!App'
+                print(f"Store app detected. Auto-start command: {command}")
             else:
+                engine_exe_path = os.path.join(SERVER_ROOT, 'engine.exe')
+                if os.path.isfile(engine_exe_path):
+                    command = f'"{engine_exe_path}"'
+                    print(f"Non-store install. Auto-start target: {engine_exe_path}")
+                else:
+                    command = f'"{sys.executable}" "{os.path.join(SERVER_ROOT, "main.py")}"'
+                    print(f"engine.exe not found, falling back to: {command}")
 
-                print("engine.exe not found, falling back to sys.executable running main.py")
-                target = sys.executable
-
-                args = f'"{os.path.join(SERVER_ROOT, "main.py")}"'
-                cwd = SERVER_ROOT
-
-            shortcut = shell.CreateShortCut(shortcut_path)
-            shortcut.Targetpath = target
-            shortcut.Arguments = args
-            shortcut.WorkingDirectory = cwd
-            shortcut.WindowStyle = 1
-            shortcut.Description = "Librewall Engine"
-            shortcut.save()
-            print(f"Added shortcut to: {shortcut_path}")
+            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, REG_KEY_PATH, 0, winreg.KEY_SET_VALUE)
+            winreg.SetValueEx(key, REG_VALUE_NAME, 0, winreg.REG_SZ, command)
+            winreg.CloseKey(key)
+            print(f"Added auto-start registry entry: {REG_VALUE_NAME}")
         else:
-
-            if os.path.exists(shortcut_path):
-                os.remove(shortcut_path)
-                print(f"Removed shortcut from: {shortcut_path}")
-            else:
-                print("Startup shortcut does not exist, nothing to remove.")
+            try:
+                key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, REG_KEY_PATH, 0, winreg.KEY_SET_VALUE)
+                winreg.DeleteValue(key, REG_VALUE_NAME)
+                winreg.CloseKey(key)
+                print(f"Removed auto-start registry entry: {REG_VALUE_NAME}")
+            except FileNotFoundError:
+                print("Auto-start registry entry does not exist, nothing to remove.")
+        _cleanup_old_startup_shortcut()
 
         return True, None
     except Exception as e:
-        print(f"Error managing startup shortcut: {e}")
+        print(f"Error managing auto-start registry: {e}")
         return False, str(e)
 
 def validate_wallpaper(theme_dir_name, theme_path):
