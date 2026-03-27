@@ -22,6 +22,8 @@ if not api_config.developer_enabled:
    builtins.print = print
    sys.stdout = NullWriter()
    sys.stderr = NullWriter()
+
+import gpu_utils
 import http.server
 import socketserver
 import threading
@@ -572,6 +574,11 @@ class EditorHTTPHandler(http.server.SimpleHTTPRequestHandler):
                 config['appVersionName'] = CURRENT_APP_VERSION_NAME
                 config['enginePort'] = config.get('port')
                 config['apiBaseUrl'] = API_BASE_URL 
+                
+               
+                config['gpu_preference'] = gpu_utils.get_gpu_preference()
+                config['gpu_names'] = gpu_utils.get_gpu_info()
+                
                 self.send_json_response(200, config)
             except Exception as e:
                 self.send_json_response(500, {'error': f"Error reading config: {e}"})
@@ -741,6 +748,40 @@ class EditorHTTPHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_json_response(200, {'status': 'success', 'message': 'Settings saved'})
             except Exception as e:
                 print(f"Error saving settings: {e}")
+                self.send_json_response(500, {'error': str(e)})
+            return
+        
+        elif self.path == '/set_gpu_preference':
+            try:
+                content_len = int(self.headers.get('Content-Length'))
+                post_body = self.rfile.read(content_len)
+                data = json.loads(post_body)
+                
+                # Default to 0 (Let Windows Decide) if not provided
+                level = int(data.get('level', 0))
+
+                success = gpu_utils.set_gpu_preference(level)
+                
+                if success:
+                    self.send_json_response(200, {'status': 'success', 'message': f'GPU preference set to {level}'})
+                else:
+                    self.send_json_response(500, {'error': 'Failed to modify Windows Registry.'})
+
+            except Exception as e:
+                print(f"Error setting GPU preference: {e}")
+                self.send_json_response(500, {'error': str(e)})
+            return
+
+        elif self.path == '/restart_app':
+            try:
+                # Send the success response FIRST so the UI knows it worked
+                self.send_json_response(200, {'status': 'success', 'message': 'Initiating restart sequence...'})
+                
+                # Trigger the restart in a separate thread so the HTTP socket can close cleanly
+                threading.Thread(target=gpu_utils.restart_librewall, daemon=True).start()
+                
+            except Exception as e:
+                print(f"Error triggering restart: {e}")
                 self.send_json_response(500, {'error': str(e)})
             return
 

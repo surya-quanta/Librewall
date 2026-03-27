@@ -1,5 +1,13 @@
 import os
 import sys
+import ctypes
+import gpu_utils
+
+try:
+    ctypes.windll.user32.SetProcessDpiAwarenessContext(-4) 
+except AttributeError:
+    pass
+
 if sys.stdout is None or sys.stderr is None:
     class NullWriter:
         def write(self, text): pass
@@ -151,19 +159,29 @@ def get_reliable_windows_id():
 
 current_scale = get_real_screen_scale()
 
+# Read the saved preference: 2 is High Performance (dGPU), 1 is Power Saving (iGPU)
+import gpu_utils
+gpu_pref = gpu_utils.get_gpu_preference()
+
+if gpu_pref == 2:
+    chromium_gpu_flag = "--gpu-preference=high-performance "
+elif gpu_pref == 1:
+    chromium_gpu_flag = "--gpu-preference=low-power "
+else:
+    chromium_gpu_flag = ""
+
 os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = (
     f"--force-device-scale-factor={current_scale} "
     "--high-dpi-support=1 "
     "--enable-use-zoom-for-dsf=true "
     "--disable-renderer-backgrounding "
     "--disable-backgrounding-occluded-windows "
-    "--disable-features=CalculateNativeWinOcclusion"
-    "--autoplay-policy=no-user-gesture-required"
+    "--disable-features=CalculateNativeWinOcclusion "
     "--autoplay-policy=no-user-gesture-required "
-    "--gpu-preference=high-performance " 
+    f"{chromium_gpu_flag}" # Dynamically inject the preference
     "--enable-gpu-rasterization "        
-    "--disable-gpu-driver-bug-workarounds " 
-    "--use-angle=d3d11 "
+    "--disable-gpu-driver-bug-workarounds "
+    "--use-angle=d3d11 "   # REQUIRED for PyQt6 WebEngine stability on Windows
 )
 
 os.environ["QT_ENABLE_HIGHDPI_SCALING"] = "0"
