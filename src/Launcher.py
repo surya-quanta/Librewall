@@ -575,7 +575,7 @@ class EditorHTTPHandler(http.server.SimpleHTTPRequestHandler):
                 config['enginePort'] = config.get('port')
                 config['apiBaseUrl'] = API_BASE_URL 
                 
-                # --- ADD THESE 2 LINES ---
+               
                 config['gpu_preference'] = gpu_utils.get_gpu_preference()
                 config['gpu_names'] = gpu_utils.get_gpu_info()
                 
