@@ -346,15 +346,11 @@
         const restartModal = document.getElementById('restart-modal');
         const confirmRestartBtn = document.getElementById('confirm-restart-btn');
 
-        // You will need to add gpu_preference to your loadSettings() /get_app_settings payload
-        // For now, let's assume it defaults to 0 if not provided
-        
         gpuPreferenceSelect.addEventListener('change', async () => {
             const selectedLevel = parseInt(gpuPreferenceSelect.value);
             gpuPreferenceSelect.disabled = true;
 
             try {
-                // Call your new python backend endpoint
                 const response = await fetch('/set_gpu_preference', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -363,7 +359,6 @@
 
                 if (!response.ok) throw new Error('Failed to set GPU preference');
                 
-                // Show the restart prompt
                 restartModal.style.display = 'flex';
                 
             } catch (error) {
@@ -379,25 +374,21 @@
             confirmRestartBtn.textContent = "Restarting... Please wait";
             
             try {
-                // The fetch might throw a network error because the server instantly kills itself.
-                // This is normal and expected!
                 await fetch('/restart_app', { method: 'POST' });
             } catch (error) {
                 console.log("Server disconnected for restart.");
             }
             
-            // Give the app time to close, then force the browser view to close or attempt to reconnect
             setTimeout(() => {
                 document.getElementById('restart-modal').style.display = 'none';
                 window.location.reload(); 
             }, 3000);
         });
-        
 
         const autoStartSelect = document.getElementById('auto-start');
         const saveBtn = document.getElementById('save-btn');
         const appVersionSpan = document.getElementById('app-version');
-        const retakeTourBtn = document.getElementById('retake-tour-btn'); // NEW
+        const retakeTourBtn = document.getElementById('retake-tour-btn');
 
         let initialState = {
             auto_start: "true"
@@ -418,7 +409,6 @@
                 if (data.appVersionName) appVersionSpan.textContent = data.appVersionName;
                 if (data.enginePort) enginePort = data.enginePort;
 
-                // --- DYNAMIC GPU LABELING ---
                 const gpuSelect = document.getElementById('gpu-preference');
                 if (data.gpu_names && data.gpu_names.length > 0) {
                     const names = data.gpu_names;
@@ -427,7 +417,6 @@
                     const optPerf = gpuSelect.querySelector('option[value="2"]');
 
                     if (names.length === 1) {
-                        // Only 1 GPU detected
                         optDefault.textContent = `Let Windows Decide (${names[0]})`;
                         optPower.textContent = `Power Saving (${names[0]})`;
                         optPerf.textContent = `High Performance (${names[0]})`;
@@ -441,13 +430,11 @@
                             helper.style.color = "var(--danger-color)";
                         }
                     } else {
-                        // 2+ GPUs detected (Windows usually ranks iGPU first, dGPU second)
                         optPower.textContent = `Power Saving (${names[0]})`;
                         optPerf.textContent = `High Performance (${names[1]})`;
                     }
                 }
 
-                // Make sure to cast to String so the dropdown visually updates!
                 if (data.gpu_preference !== undefined) {
                     gpuSelect.value = data.gpu_preference.toString();
                 }
@@ -470,7 +457,6 @@
         }
 
         autoStartSelect.addEventListener('change', checkChanges);
-
 
         retakeTourBtn.addEventListener('click', async () => {
             retakeTourBtn.disabled = true;
@@ -589,8 +575,6 @@
                 }, 2000);
             }
         });
-
-
 
         async function loadContributors() {
             const container = document.getElementById('contributors-list');
