@@ -89,8 +89,6 @@ except ImportError:
     HAS_THREEJS_ASSETS = False
     print(" No threejs assets found. Running in dev mode.")
 
-
-
 API_BASE_URL = api_config.base_url
 CURRENT_APP_VERSION = api_config.CURRENT_APP_VERSION
 CURRENT_APP_VERSION_NAME = api_config.CURRENT_APP_VERSION_NAME
@@ -125,7 +123,6 @@ def _get_hwnd_by_title_substring(substring: str) -> int:
     found_hwnd = ctypes.c_ulong(0)
 
     def callback(hwnd, lParam):
-
         if not user32.IsWindowVisible(hwnd):
             return True
 
@@ -138,7 +135,6 @@ def _get_hwnd_by_title_substring(substring: str) -> int:
         title = buff.value.lower()
 
         if substring in title:
-
             found_hwnd.value = hwnd
             return False
 
@@ -180,14 +176,12 @@ def check_single_instance(mutex_name=r"Local\librewall", window_title="librewall
     global mutex_handle
 
     mutex_handle = kernel32.CreateMutexW(None, False, mutex_name)
+    gpu_utils.mutex_handle = mutex_handle
 
     if kernel32.GetLastError() == 183:
-
         if mutex_handle:
             kernel32.CloseHandle(mutex_handle)
-
         sys.exit(0)
-
         return False
 
     return True  
@@ -212,11 +206,9 @@ LOADING_HTML_CONTENT = """
         const targetUrl = "http://127.0.0.1:5001";
         async function checkServer() {
             try {
-                // Fetch with no-cache to ensure the server is actually responding
                 await fetch(targetUrl, { mode: 'no-cors', cache: 'no-store' });
                 window.location.replace(targetUrl);
             } catch (e) {
-                // Retrying every 500ms (0.5 second)
                 setTimeout(checkServer, 500); 
             }
         }
@@ -256,7 +248,6 @@ def read_app_config():
         return defaults
 
 def _get_package_family_name():
-    """Extract the PackageFamilyName for Store/MSIX apps."""
     try:
         parts = SERVER_ROOT.replace('/', '\\').split('\\')
         for part in parts:
@@ -274,7 +265,7 @@ def _get_package_family_name():
     try:
         startupinfo = subprocess.STARTUPINFO()
         startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-        startupinfo.wShowWindow = 0  # SW_HIDE
+        startupinfo.wShowWindow = 0 
         result = subprocess.run(
             ['powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-Command',
              "(Get-AppxPackage -Name 'dkydivyansh.Librewall').PackageFamilyName"],
@@ -478,13 +469,11 @@ def start_engine_process():
     )
 
 class EditorHTTPHandler(http.server.SimpleHTTPRequestHandler):
-    """Custom HTTP handler for GET and POST requests."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=SERVER_ROOT, **kwargs)
 
     def send_json_response(self, status_code, data):
-        """Helper to send JSON responses."""
         response_data = json.dumps(data).encode('utf-8')
         self.send_response(status_code)
         self.send_header('Content-Type', 'application/json')
@@ -494,7 +483,6 @@ class EditorHTTPHandler(http.server.SimpleHTTPRequestHandler):
         self.wfile.write(response_data)
 
     def do_OPTIONS(self):
-        """Handle pre-flight CORS requests for POST."""
         self.send_response(204) 
 
         self.send_header('Access-Control-Allow-Origin', '*')
@@ -507,7 +495,6 @@ class EditorHTTPHandler(http.server.SimpleHTTPRequestHandler):
         return user_agent == APP_SECURITY_TOKEN
 
     def do_HEAD(self):
-        """Handle HEAD requests — delegates to do_GET so AppData paths resolve."""
         self.do_GET()
 
     def do_GET(self):
@@ -533,7 +520,6 @@ class EditorHTTPHandler(http.server.SimpleHTTPRequestHandler):
                 return super().do_GET()
 
             if HAS_EMBEDDED_ASSETS:
-
                 html_bytes = frontend_assets.get_asset(asset_var)
 
                 if html_bytes:
@@ -542,11 +528,9 @@ class EditorHTTPHandler(http.server.SimpleHTTPRequestHandler):
                     self.send_header("Content-Length", str(len(html_bytes)))
                     self.end_headers()
                     self.wfile.write(html_bytes) 
-
                     return
 
         if self.path == '/installed_themes':
-
             try:
                 base_dir = handler.get_data_path(WALLPAPERS_DIR)
                 if not os.path.isdir(base_dir):
@@ -559,7 +543,6 @@ class EditorHTTPHandler(http.server.SimpleHTTPRequestHandler):
             return
 
         elif self.path == '/wallpapers':
-
             try:
                 data = scan_all_wallpapers()
                 self.send_json_response(200, data)
@@ -574,11 +557,8 @@ class EditorHTTPHandler(http.server.SimpleHTTPRequestHandler):
                 config['appVersionName'] = CURRENT_APP_VERSION_NAME
                 config['enginePort'] = config.get('port')
                 config['apiBaseUrl'] = API_BASE_URL 
-                
-               
                 config['gpu_preference'] = gpu_utils.get_gpu_preference()
                 config['gpu_names'] = gpu_utils.get_gpu_info()
-                
                 self.send_json_response(200, config)
             except Exception as e:
                 self.send_json_response(500, {'error': f"Error reading config: {e}"})
@@ -756,8 +736,6 @@ class EditorHTTPHandler(http.server.SimpleHTTPRequestHandler):
                 content_len = int(self.headers.get('Content-Length'))
                 post_body = self.rfile.read(content_len)
                 data = json.loads(post_body)
-                
-                # Default to 0 (Let Windows Decide) if not provided
                 level = int(data.get('level', 0))
 
                 success = gpu_utils.set_gpu_preference(level)
@@ -774,12 +752,8 @@ class EditorHTTPHandler(http.server.SimpleHTTPRequestHandler):
 
         elif self.path == '/restart_app':
             try:
-                # Send the success response FIRST so the UI knows it worked
                 self.send_json_response(200, {'status': 'success', 'message': 'Initiating restart sequence...'})
-                
-                # Trigger the restart in a separate thread so the HTTP socket can close cleanly
-                threading.Thread(target=gpu_utils.restart_librewall, daemon=True).start()
-                
+                gpu_utils.restart_librewall()
             except Exception as e:
                 print(f"Error triggering restart: {e}")
                 self.send_json_response(500, {'error': str(e)})
@@ -974,7 +948,6 @@ class EditorHTTPHandler(http.server.SimpleHTTPRequestHandler):
                 print(f"Error previewing theme: {e}")
                 self.send_json_response(500, {'error': str(e)})
             return
-
         elif self.path == '/import_theme':
             try:
                 content_type = self.headers.get('Content-Type')
@@ -1277,7 +1250,7 @@ class EditorHTTPHandler(http.server.SimpleHTTPRequestHandler):
                      if len(zf.namelist()) > 0:
                          root_folder_parts = zf.namelist()[0].split('/')
                          if len(root_folder_parts) > 1 and zf.namelist()[0].endswith('/'):
-                               root_folder = zf.namelist()[0]
+                                root_folder = zf.namelist()[0]
                      
                      for file_info in zf.infolist():
                         if file_info.is_dir(): continue
@@ -1473,7 +1446,6 @@ class EditorHTTPHandler(http.server.SimpleHTTPRequestHandler):
                         attempts += 1
                         print(f"Attempt {attempts} to delete '{theme_id}' failed: {e}. Retrying in 0.5s...")
                         time.sleep(0.5)
-
                 if not success:
                     raise Exception(f"Failed to delete '{theme_id}' after {max_attempts} attempts. File may be locked. Error: {last_error}")
 
@@ -1530,8 +1502,6 @@ class EditorHTTPHandler(http.server.SimpleHTTPRequestHandler):
                 print(f"Error opening AppData folder: {e}")
                 self.send_json_response(500, {'error': str(e)})
             return
-
-
         self.send_json_response(404, {'error': "Not Found"})
 
 class ThreadingHTTPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
@@ -1579,7 +1549,6 @@ class EditorWindow(QMainWindow):
         no_select_script.setInjectionPoint(QWebEngineScript.InjectionPoint.DocumentCreation)
         no_select_script.setWorldId(QWebEngineScript.ScriptWorldId.MainWorld)
         no_select_script.setRunsOnSubFrames(True)
-        no_select_script.setRunsOnSubFrames(True)
         self.webEngineView.page().profile().scripts().insert(no_select_script)
         
         self.webEngineView.page().profile().setHttpUserAgent(APP_SECURITY_TOKEN)
@@ -1606,9 +1575,7 @@ class EditorWindow(QMainWindow):
         else:
             self.dev_tools_window.show()
             self.dev_tools_window.activateWindow()
-
 if __name__ == "__main__":
-    
     os.environ["QTWEBENGINE_REMOTE_DEBUGGING"] = "9222"
 
     app = QApplication(sys.argv)
